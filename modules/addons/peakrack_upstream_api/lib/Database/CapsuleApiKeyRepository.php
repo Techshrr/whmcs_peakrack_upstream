@@ -67,6 +67,45 @@ final class CapsuleApiKeyRepository implements ApiKeyRepository
         ]);
     }
 
+    public function consumeRateLimit(int $id, int $now, int $windowSeconds): bool
+    {
+        return Capsule::connection()->transaction(function () use ($id, $now, $windowSeconds): bool {
+            $row = Capsule::table(Schema::API_KEYS)
+                ->where('id', $id)
+                ->where('enabled', 1)
+                ->lockForUpdate()
+                ->first();
+
+            if ($row === null) {
+                return false;
+            }
+
+            $attributes = (array) $row;
+            $windowStart = $attributes['rate_window_started_at'] === null
+                ? null
+                : (int) $attributes['rate_window_started_at'];
+            $count = (int) $attributes['rate_window_count'];
+            $limit = max(1, (int) $attributes['rate_limit_per_minute']);
+
+            if ($windowStart === null || $windowStart + $windowSeconds <= $now) {
+                $windowStart = $now;
+                $count = 0;
+            }
+
+            if ($count >= $limit) {
+                return false;
+            }
+
+            Capsule::table(Schema::API_KEYS)->where('id', $id)->update([
+                'rate_window_started_at' => $windowStart,
+                'rate_window_count' => $count + 1,
+                'updated_at' => $now,
+            ]);
+
+            return true;
+        });
+    }
+
     public function hasServices(int $id): bool
     {
         return Capsule::table(Schema::SERVICES)->where('api_key_id', $id)->exists();

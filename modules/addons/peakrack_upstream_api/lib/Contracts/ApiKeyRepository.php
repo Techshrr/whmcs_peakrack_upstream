@@ -27,6 +27,8 @@ interface ApiKeyRepository
 
     public function updateUsage(int $id, string $sourceIp, int $usedAt): void;
 
+    public function consumeRateLimit(int $id, int $now, int $windowSeconds): bool;
+
     public function hasServices(int $id): bool;
 
     public function delete(int $id): void;

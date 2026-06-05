@@ -21,4 +21,5 @@ final class Config
     public const SUPPORTED_WHMCS_SERIES = '9.0';
     public const SIGNATURE_TOLERANCE_SECONDS = 300;
     public const DEFAULT_RATE_LIMIT = 120;
+    public const MAX_REQUEST_BODY_BYTES = 65536;
 }
