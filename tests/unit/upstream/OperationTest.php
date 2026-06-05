@@ -31,6 +31,7 @@ final class OperationTest extends TestCase
 
         $manual = $operation->manualReview('MANUAL_REVIEW_REQUIRED', 'Check provider state.');
         $this->assertSame('manual_review', $manual->status());
+        $this->assertSame('accepted', $manual->stage());
     }
 
     public function testTerminalOperationCannotTransition(): void

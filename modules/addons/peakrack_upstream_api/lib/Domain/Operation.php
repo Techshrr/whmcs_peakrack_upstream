@@ -167,7 +167,14 @@ final class Operation
     public function manualReview(string $code, string $message): self
     {
         $this->assertTransitionFrom([self::PROCESSING]);
-        return $this->withStatus(self::MANUAL_REVIEW, $this->result, $code, $message, 'manual_review', null);
+        return $this->withStatus(
+            self::MANUAL_REVIEW,
+            $this->result,
+            $code,
+            $message,
+            $this->stage ?? 'manual_review',
+            null
+        );
     }
 
     public function retry(string $code, string $message, int $nextAttemptAt): self
@@ -180,6 +187,31 @@ final class Operation
     {
         $this->assertTransitionFrom([self::PROCESSING]);
         return $this->withStatus(self::PROCESSING, $this->result, $code, $message, 'verify', $nextAttemptAt);
+    }
+
+    public function retryManualReview(int $nextAttemptAt): self
+    {
+        if ($this->status !== self::MANUAL_REVIEW) {
+            throw new LogicException('Only a manual-review operation can be explicitly retried.');
+        }
+
+        return new self(
+            $this->id,
+            $this->apiKeyId,
+            $this->action,
+            $this->idempotencyKey,
+            $this->requestHash,
+            self::PROCESSING,
+            $this->result,
+            null,
+            null,
+            $this->localServiceId,
+            $this->sanitizedPayload,
+            $this->stage ?? 'verify',
+            $this->attemptCount,
+            $nextAttemptAt,
+            $this->executionPayload
+        );
     }
 
     public function id(): string

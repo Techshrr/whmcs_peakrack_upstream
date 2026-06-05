@@ -129,6 +129,44 @@ final class CreateExecutorTest extends TestCase
         $this->assertSame(0, $billing->compensateCount);
     }
 
+    public function testManualReviewRetryPreservesCompensationCheckpointWithoutReplayingCredit(): void
+    {
+        $trace = new CreateExecutorTrace();
+        $billing = new CreateExecutorFakeBilling($trace);
+        $operation = Operation::restore(
+            id: 'create-op',
+            apiKeyId: 7,
+            action: 'create',
+            idempotencyKey: 'create:123',
+            requestHash: hash('sha256', 'create'),
+            status: Operation::PROCESSING,
+            result: [
+                'order_id' => 9,
+                'invoice_id' => 11,
+                'service_id' => 22,
+                'applied_credit_amount' => '12.34000000',
+            ],
+            localServiceId: 123,
+            sanitizedPayload: $this->payload('[REDACTED]'),
+            stage: 'compensation_pending',
+            attemptCount: 2
+        )
+            ->manualReview('MANUAL_REVIEW_REQUIRED', 'Compensation outcome is unknown.')
+            ->retryManualReview(1780617600);
+        $executor = new CreateExecutor(
+            $billing,
+            new CreateExecutorFakeProvisioning($trace, [['service_status' => 'failed']]),
+            new CreateExecutorFakeServices(),
+            new CreateExecutorFakeOperations()
+        );
+
+        $result = $executor->verify($operation->resumeVerification());
+
+        $this->assertSame(Operation::MANUAL_REVIEW, $result->status());
+        $this->assertSame('compensation_pending', $result->stage());
+        $this->assertSame(0, $billing->compensateCount);
+    }
+
     public function testExistingFailedBindingDoesNotBecomeCompletedCreate(): void
     {
         $trace = new CreateExecutorTrace();
