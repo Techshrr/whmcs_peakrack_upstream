@@ -37,7 +37,8 @@ final class Operation
         private readonly array $sanitizedPayload = [],
         private readonly ?string $stage = null,
         private readonly int $attemptCount = 0,
-        private readonly ?int $nextAttemptAt = null
+        private readonly ?int $nextAttemptAt = null,
+        private readonly array $executionPayload = []
     ) {
     }
 
@@ -48,7 +49,8 @@ final class Operation
         string $idempotencyKey,
         string $requestHash,
         ?int $localServiceId = null,
-        array $sanitizedPayload = []
+        array $sanitizedPayload = [],
+        ?array $executionPayload = null
     ): self {
         return new self(
             $id,
@@ -62,7 +64,10 @@ final class Operation
             null,
             $localServiceId,
             $sanitizedPayload,
-            'accepted'
+            'accepted',
+            0,
+            null,
+            $executionPayload ?? $sanitizedPayload
         );
     }
 
@@ -80,7 +85,8 @@ final class Operation
         array $sanitizedPayload = [],
         ?string $stage = null,
         int $attemptCount = 0,
-        ?int $nextAttemptAt = null
+        ?int $nextAttemptAt = null,
+        ?array $executionPayload = null
     ): self {
         return new self(
             $id,
@@ -96,50 +102,84 @@ final class Operation
             $sanitizedPayload,
             $stage,
             $attemptCount,
-            $nextAttemptAt
+            $nextAttemptAt,
+            $executionPayload ?? $sanitizedPayload
         );
     }
 
     public function start(): self
     {
         $this->assertTransitionFrom([self::QUEUED]);
-        return $this->withStatus(self::PROCESSING);
+        return $this->withStatus(self::PROCESSING, $this->result);
     }
 
     public function resumeVerification(): self
     {
         $this->assertTransitionFrom([self::PROCESSING]);
-        return $this->withStatus(self::PROCESSING, [], null, null, 'verify', null);
+        return $this->withStatus(self::PROCESSING, $this->result, null, null, $this->stage, null);
+    }
+
+    public function advance(string $stage, array $result = []): self
+    {
+        $this->assertTransitionFrom([self::PROCESSING]);
+        return $this->withStatus(
+            self::PROCESSING,
+            array_replace($this->result, $result),
+            null,
+            null,
+            $stage,
+            null
+        );
+    }
+
+    public function defer(string $stage, int $nextAttemptAt, array $result = []): self
+    {
+        $this->assertTransitionFrom([self::PROCESSING]);
+        return $this->withStatus(
+            self::PROCESSING,
+            array_replace($this->result, $result),
+            null,
+            null,
+            $stage,
+            $nextAttemptAt
+        );
     }
 
     public function complete(array $result): self
     {
         $this->assertTransitionFrom([self::PROCESSING]);
-        return $this->withStatus(self::COMPLETED, $result, null, null, 'completed', null);
+        return $this->withStatus(
+            self::COMPLETED,
+            array_replace($this->result, $result),
+            null,
+            null,
+            'completed',
+            null
+        );
     }
 
     public function fail(string $code, string $message): self
     {
         $this->assertTransitionFrom([self::PROCESSING]);
-        return $this->withStatus(self::FAILED, [], $code, $message, 'failed', null);
+        return $this->withStatus(self::FAILED, $this->result, $code, $message, 'failed', null);
     }
 
     public function manualReview(string $code, string $message): self
     {
         $this->assertTransitionFrom([self::PROCESSING]);
-        return $this->withStatus(self::MANUAL_REVIEW, [], $code, $message, 'manual_review', null);
+        return $this->withStatus(self::MANUAL_REVIEW, $this->result, $code, $message, 'manual_review', null);
     }
 
     public function retry(string $code, string $message, int $nextAttemptAt): self
     {
         $this->assertTransitionFrom([self::QUEUED, self::PROCESSING]);
-        return $this->withStatus(self::QUEUED, [], $code, $message, 'retry', $nextAttemptAt);
+        return $this->withStatus(self::QUEUED, $this->result, $code, $message, 'retry', $nextAttemptAt);
     }
 
     public function awaitVerification(string $code, string $message, int $nextAttemptAt): self
     {
         $this->assertTransitionFrom([self::PROCESSING]);
-        return $this->withStatus(self::PROCESSING, [], $code, $message, 'verify', $nextAttemptAt);
+        return $this->withStatus(self::PROCESSING, $this->result, $code, $message, 'verify', $nextAttemptAt);
     }
 
     public function id(): string
@@ -195,6 +235,11 @@ final class Operation
     public function sanitizedPayload(): array
     {
         return $this->sanitizedPayload;
+    }
+
+    public function executionPayload(): array
+    {
+        return $this->executionPayload;
     }
 
     public function stage(): ?string
@@ -255,7 +300,8 @@ final class Operation
             $this->sanitizedPayload,
             $stage ?? $this->stage,
             $this->attemptCount,
-            $nextAttemptAt
+            $nextAttemptAt,
+            $this->executionPayload
         );
     }
 }

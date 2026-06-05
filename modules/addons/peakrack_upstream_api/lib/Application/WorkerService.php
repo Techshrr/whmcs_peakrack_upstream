@@ -92,10 +92,12 @@ final class WorkerService
         $resources = $this->acquireResources($operation);
         if ($resources === null) {
             if ($operation->status() === Operation::PROCESSING) {
-                return $operation->resumeVerification()->awaitVerification(
-                    ApiError::OPERATION_PROCESSING,
-                    'Another operation currently owns the required lock.',
-                    $this->clock->now() + $this->backoff($operation->attemptCount())
+                return $operation->resumeVerification()->defer(
+                    $operation->stage() ?? 'verify',
+                    $this->clock->now() + $this->backoff($operation->attemptCount()),
+                    [
+                        'lock_error_code' => ApiError::OPERATION_PROCESSING,
+                    ]
                 );
             }
 

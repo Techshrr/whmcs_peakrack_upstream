@@ -28,7 +28,8 @@ final class Request
         private readonly array $query,
         array $headers,
         private readonly string $rawBody,
-        private readonly string $sourceIp
+        private readonly string $sourceIp,
+        private readonly bool $secure = true
     ) {
         $this->method = strtoupper($method);
         $this->headers = $this->normalizeHeaders($headers);
@@ -62,6 +63,11 @@ final class Request
     public function sourceIp(): string
     {
         return $this->sourceIp;
+    }
+
+    public function isSecure(): bool
+    {
+        return $this->secure;
     }
 
     public function json(array $allowedFields, array $requiredFields = []): array

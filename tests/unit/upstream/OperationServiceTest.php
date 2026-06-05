@@ -130,6 +130,36 @@ final class OperationServiceTest extends TestCase
         $this->assertSame(['billing:44', 'service:7:123'], $locks->released);
     }
 
+    public function testCreateLockConflictDoesNotPersistPasswordlessQueuedOperation(): void
+    {
+        [$service, , $locks, $executor, $trace] = $this->service();
+        $locks->deny['service:7:123'] = true;
+
+        try {
+            $service->admit(
+                7,
+                123,
+                'create',
+                'service:create:123',
+                [
+                    'local_service_id' => 123,
+                    'product_id' => 10,
+                    'billing_cycle' => 'monthly',
+                    'password' => 'temporary-secret',
+                ],
+                true,
+                44
+            );
+        } catch (ValidationException $exception) {
+            $this->assertSame(ApiError::OPERATION_PROCESSING, $exception->apiErrorCode());
+            $this->assertFalse(in_array('admit', $trace->events, true));
+            $this->assertSame(0, $executor->executeCount);
+            return;
+        }
+
+        throw new RuntimeException('Expected create lock conflict.');
+    }
+
     private function service(): array
     {
         $trace = new OperationServiceTrace();

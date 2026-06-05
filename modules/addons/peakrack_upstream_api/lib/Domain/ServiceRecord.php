@@ -79,6 +79,38 @@ final class ServiceRecord
         return $this->panelUrl;
     }
 
+    public function withStatus(string $status, ?string $primaryIp = null, ?string $panelUrl = null): self
+    {
+        return new self(
+            $this->apiKeyId,
+            $this->localServiceId,
+            $this->upstreamServiceId,
+            $this->upstreamOrderId,
+            $this->upstreamInvoiceId,
+            $this->productId,
+            $this->billingCycle,
+            $status,
+            $primaryIp ?? $this->primaryIp,
+            $panelUrl ?? $this->panelUrl
+        );
+    }
+
+    public function withPackage(int $productId, string $billingCycle): self
+    {
+        return new self(
+            $this->apiKeyId,
+            $this->localServiceId,
+            $this->upstreamServiceId,
+            $this->upstreamOrderId,
+            $this->upstreamInvoiceId,
+            $productId,
+            $billingCycle,
+            $this->status,
+            $this->primaryIp,
+            $this->panelUrl
+        );
+    }
+
     public function toApiArray(): array
     {
         return [

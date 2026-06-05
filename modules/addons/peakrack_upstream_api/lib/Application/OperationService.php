@@ -21,6 +21,7 @@ use PeakRack\UpstreamApi\Contracts\OperationExecutor;
 use PeakRack\UpstreamApi\Contracts\OperationRepository;
 use PeakRack\UpstreamApi\Domain\ApiError;
 use PeakRack\UpstreamApi\Domain\Operation;
+use PeakRack\UpstreamApi\Domain\ValidationException;
 use PeakRack\UpstreamApi\Security\Redactor;
 use Throwable;
 
@@ -52,8 +53,10 @@ final class OperationService
 
         $normalized = $this->normalize($businessPayload);
         $sanitized = Redactor::redact($normalized);
+        $executionPayload = $normalized;
         if ($creditConsuming && is_array($sanitized)) {
             $sanitized['_billing_client_id'] = $billingClientId;
+            $executionPayload['_billing_client_id'] = $billingClientId;
         }
         $requested = Operation::admit(
             $this->ids->uuid(),
@@ -62,21 +65,50 @@ final class OperationService
             $idempotencyKey,
             hash('sha256', $this->encode($normalized)),
             $localServiceId,
-            is_array($sanitized) ? $sanitized : []
+            is_array($sanitized) ? $sanitized : [],
+            $executionPayload
         );
-        $admitted = $this->operations->admit($requested, $requested->sanitizedPayload());
+        $resources = null;
+
+        if ($action === 'create') {
+            $existing = $this->operations->findByIdempotency($apiKeyId, $idempotencyKey);
+            if ($existing !== null) {
+                return $this->operations->admit($requested, $requested->sanitizedPayload());
+            }
+
+            $resources = $this->acquireResources($requested, $creditConsuming, $billingClientId);
+            if ($resources === null) {
+                throw new ValidationException(
+                    ApiError::OPERATION_PROCESSING,
+                    'Another create operation currently owns the required lock.',
+                    409
+                );
+            }
+        }
+
+        try {
+            $admitted = $this->operations->admit($requested, $requested->sanitizedPayload());
+        } catch (Throwable $exception) {
+            if ($resources !== null) {
+                $this->releaseResources($resources, $requested->id());
+            }
+            throw $exception;
+        }
 
         if ($admitted->id() !== $requested->id()) {
+            if ($resources !== null) {
+                $this->releaseResources($resources, $requested->id());
+            }
             return $admitted;
         }
 
-        $this->operations->appendEvent($admitted->id(), 'accepted', []);
-        $resources = $this->acquireResources($admitted, $creditConsuming, $billingClientId);
+        $resources ??= $this->acquireResources($admitted, $creditConsuming, $billingClientId);
         if ($resources === null) {
             return $admitted;
         }
 
         try {
+            $this->operations->appendEvent($admitted->id(), 'accepted', []);
             $processing = $admitted->start();
             $this->operations->save($processing);
             $this->operations->appendEvent($processing->id(), 'processing', []);

@@ -50,6 +50,7 @@ final class CapsuleServiceRepository implements ServiceRepository
             'service_status' => $service->status(),
             'cached_primary_ip' => $service->primaryIp(),
             'cached_panel_url' => $service->panelUrl(),
+            'last_sync_at' => $now,
             'updated_at' => $now,
         ];
 

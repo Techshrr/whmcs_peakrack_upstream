@@ -98,7 +98,10 @@ final class CapsulePolicyRepository implements PolicyRepository
             $this->decode($row['actions_json']),
             $this->decode($row['locations_json']),
             $this->decode($row['os_templates_json']),
-            (bool) $row['destroy_allowed']
+            (bool) $row['destroy_allowed'],
+            $this->decode($row['delivery_mappings_json']),
+            (bool) $row['sso_allowed'],
+            $this->decode($row['sso_hosts_json'])
         );
     }
 

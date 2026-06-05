@@ -21,7 +21,10 @@ final class ProductPolicy
         private readonly array $actions,
         private readonly array $locations = [],
         private readonly array $osTemplates = [],
-        private readonly bool $destroyAllowed = false
+        private readonly bool $destroyAllowed = false,
+        private readonly array $deliveryMappings = [],
+        private readonly bool $ssoAllowed = false,
+        private readonly array $ssoHosts = []
     ) {
     }
 
@@ -86,5 +89,20 @@ final class ProductPolicy
     public function destroyAllowed(): bool
     {
         return $this->destroyAllowed;
+    }
+
+    public function deliveryMappings(): array
+    {
+        return $this->deliveryMappings;
+    }
+
+    public function ssoAllowed(): bool
+    {
+        return $this->ssoAllowed;
+    }
+
+    public function ssoHosts(): array
+    {
+        return $this->ssoHosts;
     }
 }
