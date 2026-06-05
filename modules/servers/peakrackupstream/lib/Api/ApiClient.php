@@ -21,7 +21,7 @@ use PeakRack\Upstream\Validator;
 use RuntimeException;
 use Throwable;
 
-final class ApiClient
+final class ApiClient implements ApiClientInterface
 {
     private const OPERATION_STATUSES = ['queued', 'processing', 'completed', 'failed', 'manual_review'];
 

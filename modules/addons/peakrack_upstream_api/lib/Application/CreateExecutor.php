@@ -125,7 +125,11 @@ final class CreateExecutor implements OperationExecutor
         ));
 
         if ($status === 'active') {
+            $result = $operation->result();
             return $operation->complete([
+                'upstream_service_id' => $this->positiveInt($result, 'service_id'),
+                'upstream_order_id' => $this->positiveInt($result, 'order_id'),
+                'upstream_invoice_id' => $this->positiveInt($result, 'invoice_id'),
                 'service_status' => $status,
                 'primary_ip' => $delivery['primary_ip'] ?? null,
                 'panel_url' => $delivery['panel_url'] ?? null,

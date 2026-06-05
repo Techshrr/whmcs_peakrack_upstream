@@ -34,6 +34,9 @@ final class CreateExecutorTest extends TestCase
         $this->assertSame(['billing.create', 'delivery.read'], $trace->events);
         $this->assertContains('provisioning_started', $operations->stages);
         $this->assertSame('12.34000000', $result->result()['applied_credit_amount']);
+        $this->assertSame(22, $result->result()['upstream_service_id']);
+        $this->assertSame(9, $result->result()['upstream_order_id']);
+        $this->assertSame(11, $result->result()['upstream_invoice_id']);
         $this->assertSame('active', $services->saved[count($services->saved) - 1]->status());
         $this->assertSame('temporary-secret', $billing->lastOrderFields['password']);
     }
