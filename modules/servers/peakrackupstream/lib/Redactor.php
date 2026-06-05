@@ -20,6 +20,10 @@ final class Redactor
     private const SENSITIVE_KEYS = [
         'api_key',
         'api_secret',
+        'peakrack-key',
+        'public_key',
+        'serverusername',
+        'serverpassword',
         'authorization',
         'password',
         'rootpw',
