@@ -1,1 +1,7 @@
 .worktrees/
+release-packages/
+*.zip
+*.sha256
+.idea/
+.vscode/
+Thumbs.db
