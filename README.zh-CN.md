@@ -126,6 +126,17 @@ Addon 后台提供 API Keys、产品策略、操作记录、托管服务和系�
 
 单元测试和模拟契约测试可以验证模块逻辑、签名、响应结构与幂等行为，但不会创建真实供应商计费订单。生产启用前，必须在隔离的 WHMCS 环境中使用真实上游 Provisioning Module 验证完整流程，不能仅根据模拟测试声明供应商兼容性。
 
+如需对已安装的 WHMCS 目录执行可选安全集成检查，请先同步模块源码，再运行 `whmcs-safe` 测试组：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/sync-installed.ps1
+$env:PEAKRACK_WHMCS_TEST = '1'
+php tests/run.php --group whmcs-safe
+Remove-Item Env:PEAKRACK_WHMCS_TEST
+```
+
+此检查要求 WHMCS 可在 CLI 中正常启动，包括数据库连接和 ionCube Loader。检查会加载模块入口、只安装 Addon 自有数据库表、验证停用不会删除这些表，并比较源码与安装目录哈希；不会创建订单或调用供应商。
+
 ## API 文档
 
 请查看 [docs/api-v1.md](docs/api-v1.md)。

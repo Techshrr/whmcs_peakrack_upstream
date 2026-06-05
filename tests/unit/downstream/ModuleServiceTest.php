@@ -181,6 +181,11 @@ final class ModuleServiceFakeApi implements ApiClientInterface
         return $this->record(__FUNCTION__, [$localServiceId]);
     }
 
+    public function getOperation(string $operationId): array
+    {
+        return $this->record(__FUNCTION__, [$operationId]);
+    }
+
     public function suspendService(int $localServiceId, string $idempotencyKey): array
     {
         return $this->record(__FUNCTION__, [$localServiceId, $idempotencyKey]);

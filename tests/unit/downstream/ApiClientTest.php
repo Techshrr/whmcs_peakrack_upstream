@@ -136,6 +136,32 @@ final class ApiClientTest extends TestCase
         );
     }
 
+    public function testGetsAnOperationByValidatedUuid(): void
+    {
+        $requests = [];
+        $client = $this->client(static function (array $request) use (&$requests): array {
+            $requests[] = $request;
+            return [
+                'status' => 202,
+                'body' => '{"success":true,"status":"processing","data":null,'
+                    . '"operation_id":"123e4567-e89b-42d3-a456-426614174000","error":null}',
+            ];
+        });
+
+        $response = $client->getOperation('123e4567-e89b-42d3-a456-426614174000');
+
+        $this->assertSame('processing', $response['status']);
+        $this->assertSame(
+            '/billing/modules/addons/peakrack_upstream_api/api/v1/operations/'
+                . '123e4567-e89b-42d3-a456-426614174000',
+            $requests[0]['path']
+        );
+        $this->assertThrows(
+            fn () => $client->getOperation('not-an-operation-id'),
+            InvalidArgumentException::class
+        );
+    }
+
     public function testMalformedOrMismatchedResponsesThrowSanitizedApiException(): void
     {
         foreach ([

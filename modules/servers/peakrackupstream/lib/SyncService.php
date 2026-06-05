@@ -88,7 +88,7 @@ final class SyncService
                 $remoteStatus = $this->remoteStatus($response);
 
                 ($this->resultApplier)($service, $response);
-                $targetStatus = self::LOCAL_STATUS_MAP[$remoteStatus] ?? null;
+                $targetStatus = $remoteStatus === null ? null : (self::LOCAL_STATUS_MAP[$remoteStatus] ?? null);
                 if ($targetStatus !== null && strcasecmp($localStatus, $targetStatus) !== 0) {
                     ($this->statusUpdater)($service, $targetStatus);
                     $summary['status_updated']++;
@@ -102,8 +102,17 @@ final class SyncService
         return $summary;
     }
 
-    private function remoteStatus(mixed $response): string
+    private function remoteStatus(mixed $response): ?string
     {
+        if (
+            is_array($response)
+            && ($response['success'] ?? false) === true
+            && in_array($response['status'] ?? '', ['queued', 'processing'], true)
+            && is_string($response['operation_id'] ?? null)
+        ) {
+            return null;
+        }
+
         if (
             !is_array($response)
             || ($response['success'] ?? false) !== true

@@ -30,6 +30,21 @@ final class AuthenticatorTest extends TestCase
         $this->assertSame(1, count($nonces->claimed));
     }
 
+    public function testAuthenticatesTheFullRequestPathWhileRoutingOnTheRelativePath(): void
+    {
+        [$authenticator] = $this->authenticator();
+        $request = $this->signedRequest(
+            'nonce-full-path',
+            self::NOW,
+            self::SECRET,
+            '192.0.2.10',
+            '/billing/modules/addons/peakrack_upstream_api/api/v1/health'
+        );
+
+        $this->assertSame('/health', $request->path());
+        $this->assertSame(7, $authenticator->authenticate($request)['id']);
+    }
+
     public function testRejectsInvalidSignatureBeforeClaimingNonce(): void
     {
         [$authenticator, , $nonces] = $this->authenticator();
@@ -143,16 +158,17 @@ final class AuthenticatorTest extends TestCase
         string $nonce,
         int $timestamp = self::NOW,
         string $secret = self::SECRET,
-        string $sourceIp = '192.0.2.10'
+        string $sourceIp = '192.0.2.10',
+        string $signaturePath = '/health'
     ): Request {
-        $signature = RequestSigner::sign($secret, 'GET', '/health', [], '', $timestamp, $nonce);
+        $signature = RequestSigner::sign($secret, 'GET', $signaturePath, [], '', $timestamp, $nonce);
 
         return new Request('GET', '/health', [], [
             'X-PeakRack-Key' => 'pk_test',
             'X-PeakRack-Timestamp' => (string) $timestamp,
             'X-PeakRack-Nonce' => $nonce,
             'X-PeakRack-Signature' => $signature,
-        ], '', $sourceIp);
+        ], '', $sourceIp, true, $signaturePath);
     }
 
     private function signedWriteRequest(string $nonce, ?string $idempotencyKey): Request

@@ -126,6 +126,17 @@ Both scripts refuse browser execution. The downstream sync uses a non-blocking p
 
 Unit and mock contract tests validate module behavior, signatures, envelopes, and idempotency without creating a billable provider order. Validate the complete flow against a staging WHMCS installation and a real upstream Provisioning Module before claiming provider compatibility or enabling production traffic.
 
+For an opt-in safe integration check against an installed WHMCS tree, first synchronize the module source, then run the `whmcs-safe` group:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/sync-installed.ps1
+$env:PEAKRACK_WHMCS_TEST = '1'
+php tests/run.php --group whmcs-safe
+Remove-Item Env:PEAKRACK_WHMCS_TEST
+```
+
+This check requires a bootable WHMCS CLI environment, including its database connection and ionCube Loader. It loads module entry points, installs only Addon-owned tables, verifies that deactivation preserves them, and compares source and installed module hashes. It does not create an order or invoke a provider.
+
 ## API Documentation
 
 See [docs/api-v1.md](docs/api-v1.md).

@@ -39,6 +39,8 @@ final class DocumentationTest extends TestCase
             'modules/servers/peakrackupstream/cron/sync.php',
             'Automatic Credit Use',
             'Credit on Downgrade',
+            'PEAKRACK_WHMCS_TEST',
+            '--group whmcs-safe',
         ] as $required) {
             $this->assertStringContains($required, $english . $chinese);
         }
@@ -114,6 +116,8 @@ final class DocumentationTest extends TestCase
             'Compress-Archive',
             'tests/fixtures',
             'SPDX-License-Identifier: Apache-2.0',
+            'System.Management.Automation.Language.Parser',
+            'ls-files --others --exclude-standard',
         ] as $required) {
             $this->assertStringContains($required, $release);
         }
@@ -124,6 +128,7 @@ final class DocumentationTest extends TestCase
             'modules/servers/peakrackupstream',
             'Get-FileHash',
             'Assert-SafeTarget',
+            'ls-files --others --ignored --exclude-standard',
         ] as $required) {
             $this->assertStringContains($required, $sync);
         }
@@ -133,5 +138,19 @@ final class DocumentationTest extends TestCase
         $this->assertStringContains('8.2', $workflow);
         $this->assertStringContains('8.3', $workflow);
         $this->assertStringContains('scripts/check-release.ps1', $workflow);
+    }
+
+    public function testDownstreamCronPrioritizesPendingServicesBeforeApplyingTheBatchLimit(): void
+    {
+        $cron = (string) file_get_contents(
+            PEAKRACK_UPSTREAM_ROOT . '/modules/servers/peakrackupstream/cron/sync.php'
+        );
+        $priority = "CASE WHEN tblhosting.domainstatus = 'Pending' THEN 0 ELSE 1 END";
+
+        $this->assertStringContains($priority, $cron);
+        $this->assertTrue(
+            strpos($cron, $priority) < strpos($cron, '->limit($limit)'),
+            'The pending-service priority must be applied before the batch limit.'
+        );
     }
 }

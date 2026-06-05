@@ -106,4 +106,24 @@ final class RequestTest extends TestCase
         $this->assertSame('2001:db8::1', $request->sourceIp());
         $this->assertSame(['b' => '2', 'a' => '1'], $request->query());
     }
+
+    public function testKeepsTheFullSignaturePathSeparateFromTheRoutePath(): void
+    {
+        $request = new Request(
+            'GET',
+            '/health',
+            [],
+            [],
+            '',
+            '192.0.2.10',
+            true,
+            '/billing/modules/addons/peakrack_upstream_api/api/v1/health'
+        );
+
+        $this->assertSame('/health', $request->path());
+        $this->assertSame(
+            '/billing/modules/addons/peakrack_upstream_api/api/v1/health',
+            $request->signaturePath()
+        );
+    }
 }

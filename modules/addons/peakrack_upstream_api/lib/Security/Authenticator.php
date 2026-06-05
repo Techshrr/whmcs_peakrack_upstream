@@ -67,7 +67,7 @@ final class Authenticator
         $expected = RequestSigner::sign(
             $secret,
             $request->method(),
-            $request->path(),
+            $request->signaturePath(),
             $request->query(),
             $request->rawBody(),
             $timestamp,

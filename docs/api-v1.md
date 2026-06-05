@@ -45,6 +45,8 @@ NONCE
 
 Canonical query keys and values use RFC 3986 encoding and are sorted by encoded key, then encoded value. The body hash uses the exact raw request bytes. The default timestamp tolerance is 300 seconds. A nonce can be accepted only once per API key during its validity window.
 
+`REQUEST_PATH` is the exact public URL path sent by the downstream client, including any upstream WHMCS base path and the Addon API entry path. The upstream router separately matches the relative route after `/api/v1`.
+
 The upstream validates the source address against the key's optional IP allowlist and applies the configured per-minute rate limit.
 
 ## Response Envelope

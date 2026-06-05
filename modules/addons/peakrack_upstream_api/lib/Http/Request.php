@@ -21,6 +21,7 @@ final class Request
 {
     private readonly string $method;
     private readonly array $headers;
+    private readonly string $signaturePath;
 
     public function __construct(
         string $method,
@@ -29,10 +30,12 @@ final class Request
         array $headers,
         private readonly string $rawBody,
         private readonly string $sourceIp,
-        private readonly bool $secure = true
+        private readonly bool $secure = true,
+        ?string $signaturePath = null
     ) {
         $this->method = strtoupper($method);
         $this->headers = $this->normalizeHeaders($headers);
+        $this->signaturePath = $signaturePath ?? $path;
     }
 
     public function method(): string
@@ -43,6 +46,11 @@ final class Request
     public function path(): string
     {
         return $this->path;
+    }
+
+    public function signaturePath(): string
+    {
+        return $this->signaturePath;
     }
 
     public function query(): array

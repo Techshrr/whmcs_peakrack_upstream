@@ -107,6 +107,25 @@ final class ApiKernelTest extends TestCase
         $this->assertStringNotContains('999', $response->body());
     }
 
+    public function testOperationPollingUsesProtocolStatusCodesAndFailureEnvelope(): void
+    {
+        [$kernel, $state] = $this->kernel();
+        $path = '/operations/123e4567-e89b-42d3-a456-426614174000';
+
+        $state->operationStatus = Operation::PROCESSING;
+        $processing = $kernel->handle($this->request('GET', $path));
+        $this->assertSame(202, $processing->statusCode());
+        $this->assertSame(true, $processing->payload()['success']);
+        $this->assertSame(Operation::PROCESSING, $processing->payload()['status']);
+
+        $state->operationStatus = Operation::FAILED;
+        $failed = $kernel->handle($this->request('GET', $path));
+        $this->assertSame(422, $failed->statusCode());
+        $this->assertSame(false, $failed->payload()['success']);
+        $this->assertSame(Operation::FAILED, $failed->payload()['status']);
+        $this->assertSame('PROVISIONING_FAILED', $failed->payload()['error']['code']);
+    }
+
     public function testRejectsInsecureRequestsBeforeAuthentication(): void
     {
         [$kernel, $state] = $this->kernel();
@@ -195,6 +214,7 @@ final class ApiKernelTest extends TestCase
 final class ApiKernelState
 {
     public int $apiKeyId = 7;
+    public string $operationStatus = Operation::COMPLETED;
     public array $trace = [];
     public array $admittedActions = [];
     public array $operationEvents = [];
@@ -281,8 +301,29 @@ final class ApiKernelOperations implements OperationRepository
 
     public function findById(string $operationId): ?Operation
     {
-        return Operation::admit($operationId, 7, 'suspend', 'existing', hash('sha256', 'existing'), 123, [])
-            ->start()->complete(['service_status' => 'active']);
+        $operation = Operation::admit(
+            $operationId,
+            7,
+            'suspend',
+            'existing',
+            hash('sha256', 'existing'),
+            123,
+            []
+        );
+        if ($this->state->operationStatus === Operation::QUEUED) {
+            return $operation;
+        }
+
+        $operation = $operation->start();
+        return match ($this->state->operationStatus) {
+            Operation::PROCESSING => $operation,
+            Operation::FAILED => $operation->fail('PROVISIONING_FAILED', 'Provisioning failed.'),
+            Operation::MANUAL_REVIEW => $operation->manualReview(
+                'MANUAL_REVIEW_REQUIRED',
+                'Manual review is required.'
+            ),
+            default => $operation->complete(['service_status' => 'active']),
+        };
     }
 
     public function findByIdempotency(int $apiKeyId, string $idempotencyKey): ?Operation

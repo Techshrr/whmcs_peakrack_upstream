@@ -226,6 +226,7 @@ if ($method === 'POST' && $relative === '/services') {
             'request_hash' => $requestHash,
             'http_status' => $httpStatus,
             'response' => $response,
+            'local_service_id' => $serviceId,
         ];
         $state['services'][(string) $serviceId] = peakrackMockDelivery($serviceId);
         return $state;
@@ -238,6 +239,30 @@ if ($method === 'POST' && $relative === '/services') {
         $response['data'],
         $response['operation_id'],
         $response['error']
+    );
+}
+
+if ($method === 'GET' && $relative === '/operations/' . PEAKRACK_MOCK_OPERATION_ID) {
+    $operation = null;
+    foreach ($store->read()['operations'] as $candidate) {
+        if (
+            is_array($candidate)
+            && ($candidate['response']['operation_id'] ?? null) === PEAKRACK_MOCK_OPERATION_ID
+        ) {
+            $operation = $candidate;
+        }
+    }
+    if (!is_array($operation)) {
+        peakrackMockError(404, 'OPERATION_NOT_FOUND', 'The operation was not found.');
+    }
+    $serviceId = (int) ($operation['local_service_id'] ?? 0);
+    peakrackMockResponse(
+        200,
+        true,
+        'completed',
+        peakrackMockDelivery($serviceId),
+        PEAKRACK_MOCK_OPERATION_ID,
+        null
     );
 }
 

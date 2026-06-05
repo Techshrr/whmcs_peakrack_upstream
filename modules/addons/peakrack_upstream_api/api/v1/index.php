@@ -29,6 +29,7 @@ use PeakRack\UpstreamApi\Database\CapsulePolicyRepository;
 use PeakRack\UpstreamApi\Database\CapsuleServiceRepository;
 use PeakRack\UpstreamApi\Domain\ApiError;
 use PeakRack\UpstreamApi\Http\Request;
+use PeakRack\UpstreamApi\Http\RequestPath;
 use PeakRack\UpstreamApi\Http\Response;
 use PeakRack\UpstreamApi\Http\Router;
 use PeakRack\UpstreamApi\Security\Authenticator;
@@ -208,17 +209,11 @@ try {
             $headers[str_replace('_', '-', substr($key, 5))] = $value;
         }
     }
-    $path = (string) ($_SERVER['PATH_INFO'] ?? '');
-    if ($path === '') {
-        $requestPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
-        $marker = '/api/v1';
-        $position = strpos($requestPath, $marker);
-        $path = $position === false ? '/' : substr($requestPath, $position + strlen($marker));
-        $path = preg_replace('#^/index\.php#', '', $path) ?: '/';
+    $requestPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    if ($requestPath === '') {
+        $requestPath = '/';
     }
-    if ($path === '') {
-        $path = '/';
-    }
+    $path = RequestPath::route($requestPath, (string) ($_SERVER['PATH_INFO'] ?? ''));
 
     $request = new Request(
         (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'),
@@ -228,7 +223,8 @@ try {
         (string) file_get_contents('php://input'),
         (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
         strtolower((string) ($_SERVER['HTTPS'] ?? '')) === 'on'
-            || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443
+            || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443,
+        $requestPath
     );
     $response = $kernel->handle($request);
 } catch (Throwable) {

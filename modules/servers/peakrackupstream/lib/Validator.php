@@ -79,6 +79,20 @@ final class Validator
         return $integer;
     }
 
+    public static function operationId(string $value): string
+    {
+        if (
+            preg_match(
+                '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/',
+                $value
+            ) !== 1
+        ) {
+            throw new InvalidArgumentException('The upstream operation ID is invalid.');
+        }
+
+        return strtolower($value);
+    }
+
     public static function billingCycle(string $cycle): string
     {
         $normalized = strtolower(str_replace(['-', '_', ' '], '', trim($cycle)));

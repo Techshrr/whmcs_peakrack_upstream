@@ -263,13 +263,7 @@ final class ApiKernel
             throw new ValidationException(ApiError::SERVICE_NOT_FOUND, 'The operation was not found.', 404);
         }
 
-        return Response::success([
-            'action' => $operation->action(),
-            'operation_status' => $operation->status(),
-            'result' => $operation->result(),
-            'error_code' => $operation->errorCode(),
-            'error_message' => $operation->errorMessage(),
-        ], $operation->status(), $operation->id());
+        return $this->operationResponse($operation);
     }
 
     private function operationResponse(Operation $operation): Response

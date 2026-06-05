@@ -51,9 +51,12 @@ final class OperationFlowContractTest extends TestCase
                 $this->payload(200, 'processing.example.test'),
                 'service:create:200'
             );
+            $operation = $client->getOperation((string) $created['operation_id']);
             $polled = $client->getService(200);
 
             $this->assertSame('processing', $created['status']);
+            $this->assertSame('completed', $operation['status']);
+            $this->assertSame('active', $operation['data']['service_status']);
             $this->assertSame('completed', $polled['status']);
             $this->assertSame('active', $polled['data']['service_status']);
             $this->assertSame(2000, $polled['data']['upstream_service_id']);

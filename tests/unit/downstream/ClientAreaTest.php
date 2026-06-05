@@ -112,6 +112,11 @@ final class ClientAreaFakeApi implements ApiClientInterface
         return [];
     }
 
+    public function getOperation(string $operationId): array
+    {
+        return [];
+    }
+
     public function suspendService(int $localServiceId, string $idempotencyKey): array
     {
         return [];

@@ -50,6 +50,20 @@ function Get-RelativePath {
 Write-Host 'Running tests...'
 Invoke-Checked -Command 'php' -Arguments @((Join-Path $Root 'tests/run.php'))
 
+Write-Host 'Checking PowerShell script syntax...'
+foreach ($Script in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') -File -Filter '*.ps1') {
+    $Tokens = $null
+    $ParseErrors = $null
+    [System.Management.Automation.Language.Parser]::ParseFile(
+        $Script.FullName,
+        [ref]$Tokens,
+        [ref]$ParseErrors
+    ) | Out-Null
+    if ($ParseErrors.Count -gt 0) {
+        throw "PowerShell syntax failed: $($Script.Name): $($ParseErrors[0].Message)"
+    }
+}
+
 Write-Host 'Linting PHP files...'
 $PhpFiles = Get-ChildItem -LiteralPath $Root -Recurse -File -Filter '*.php' |
     Where-Object { $_.FullName -notlike "$PackageRoot*" }
@@ -106,6 +120,16 @@ Write-Host 'Scanning tracked files for credential patterns...'
 $TrackedFiles = & git -C $Root ls-files
 if ($LASTEXITCODE -ne 0) {
     throw 'Unable to list tracked files for credential scanning.'
+}
+$UntrackedModuleFiles = @(
+    & git -C $Root ls-files --others --exclude-standard -- 'modules/addons/peakrack_upstream_api' 'modules/servers/peakrackupstream'
+)
+if ($LASTEXITCODE -ne 0) {
+    throw 'Unable to list untracked production module files.'
+}
+$UntrackedModuleFiles = @($UntrackedModuleFiles | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+if ($UntrackedModuleFiles.Count -gt 0) {
+    throw "Untracked production module file cannot be packaged: $($UntrackedModuleFiles[0])"
 }
 $ForbiddenTrackedNames = @('.env', 'configuration.php')
 $CredentialPatterns = @(
@@ -167,7 +191,26 @@ foreach ($Package in $Packages) {
     $Stage = Join-Path $PackageRoot ('stage-' + $Package.Name)
     $StageModule = Join-Path $Stage $Package.Folder
     New-Item -ItemType Directory -Path $StageModule | Out-Null
-    Copy-Item -Path (Join-Path $Root ($Package.Source + '/*')) -Destination $StageModule -Recurse -Force
+
+    $SourcePrefix = $Package.Source.TrimEnd('/') + '/'
+    $TrackedPackageFiles = @(
+        $TrackedFiles | Where-Object {
+            $_.Replace('\', '/').StartsWith($SourcePrefix, [System.StringComparison]::Ordinal)
+        }
+    )
+    if ($TrackedPackageFiles.Count -eq 0) {
+        throw "No tracked production files found for package $($Package.Name)."
+    }
+    foreach ($RelativePath in $TrackedPackageFiles) {
+        $Normalized = $RelativePath.Replace('\', '/')
+        $InsidePackage = $Normalized.Substring($SourcePrefix.Length)
+        $DestinationFile = Join-Path $StageModule $InsidePackage
+        $DestinationDirectory = Split-Path -Parent $DestinationFile
+        if (-not (Test-Path -LiteralPath $DestinationDirectory -PathType Container)) {
+            New-Item -ItemType Directory -Path $DestinationDirectory -Force | Out-Null
+        }
+        Copy-Item -LiteralPath (Join-Path $Root $RelativePath) -Destination $DestinationFile -Force
+    }
 
     $PackageFiles = Get-ChildItem -LiteralPath $StageModule -Recurse -File
     if ($PackageFiles.Count -eq 0) {

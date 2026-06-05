@@ -77,4 +77,33 @@ final class SyncServiceTest extends TestCase
         $this->assertFalse($executed);
         $this->assertStringContains('CLI', $stderr[0]);
     }
+
+    public function testProcessingOperationIsSyncedWithoutChangingLocalStatus(): void
+    {
+        $applied = [];
+        $updated = [];
+        $sync = new SyncService(
+            static fn (int $limit): array => [['id' => 1, 'status' => 'Pending']],
+            static fn (array $service): array => [
+                'success' => true,
+                'status' => 'processing',
+                'data' => null,
+                'operation_id' => '123e4567-e89b-42d3-a456-426614174000',
+                'error' => null,
+            ],
+            static function (array $service, array $response) use (&$applied): void {
+                $applied[] = $service['id'];
+            },
+            static function (array $service, string $status) use (&$updated): void {
+                $updated[] = $status;
+            }
+        );
+
+        $summary = $sync->run(50);
+
+        $this->assertSame([1], $applied);
+        $this->assertSame([], $updated);
+        $this->assertSame(1, $summary['synced']);
+        $this->assertSame(0, $summary['failed']);
+    }
 }

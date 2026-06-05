@@ -4,6 +4,10 @@ namespace PeakRack\Tests;
 
 use RuntimeException;
 
+final class SkippedTestException extends RuntimeException
+{
+}
+
 abstract class TestCase
 {
     public static function group(): string
@@ -76,6 +80,11 @@ abstract class TestCase
             $detail = sprintf('Expected string not to contain %s.', var_export($needle, true));
             throw new RuntimeException($message !== '' ? $message . ' ' . $detail : $detail);
         }
+    }
+
+    protected function skip(string $reason): never
+    {
+        throw new SkippedTestException($reason);
     }
 
     protected function assertThrows(callable $callback, string $expectedClass, ?string $messageContains = null): void

@@ -23,6 +23,8 @@ interface ApiClientInterface
 
     public function getService(int $localServiceId): array;
 
+    public function getOperation(string $operationId): array;
+
     public function suspendService(int $localServiceId, string $idempotencyKey): array;
 
     public function unsuspendService(int $localServiceId, string $idempotencyKey): array;

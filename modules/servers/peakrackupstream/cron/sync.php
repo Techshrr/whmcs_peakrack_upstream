@@ -12,7 +12,9 @@
  */
 
 use PeakRack\Upstream\Bootstrap;
+use PeakRack\Upstream\Idempotency;
 use PeakRack\Upstream\SyncCommand;
+use PeakRack\Upstream\SyncReader;
 use PeakRack\Upstream\SyncService;
 use WHMCS\Database\Capsule;
 
@@ -48,6 +50,7 @@ $exitCode = $command->run(
                         ->join('tblproducts', 'tblproducts.id', '=', 'tblhosting.packageid')
                         ->where('tblproducts.servertype', 'peakrackupstream')
                         ->whereIn('tblhosting.domainstatus', ['Pending', 'Active', 'Suspended'])
+                        ->orderByRaw("CASE WHEN tblhosting.domainstatus = 'Pending' THEN 0 ELSE 1 END")
                         ->orderBy('tblhosting.id')
                         ->limit($limit)
                         ->get(['tblhosting.id', 'tblhosting.domainstatus'])
@@ -67,7 +70,12 @@ $exitCode = $command->run(
                         throw new RuntimeException('Unable to build the WHMCS module parameters.');
                     }
 
-                    return peakrackupstream_api_client($params)->getService((int) $service['id']);
+                    $properties = peakrackupstream_service_properties($params);
+                    return (new SyncReader(
+                        peakrackupstream_api_client($params),
+                        $properties,
+                        new Idempotency($properties)
+                    ))->read((int) $service['id']);
                 },
                 static function (array $service, array $response): void {
                     $params = ModuleBuildParams((int) $service['id']);

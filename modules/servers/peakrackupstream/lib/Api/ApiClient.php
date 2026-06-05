@@ -79,6 +79,11 @@ final class ApiClient implements ApiClientInterface
         return $this->request('GET', '/services/' . Validator::positiveInt($localServiceId, 'local service ID'));
     }
 
+    public function getOperation(string $operationId): array
+    {
+        return $this->request('GET', '/operations/' . Validator::operationId($operationId));
+    }
+
     public function suspendService(int $localServiceId, string $idempotencyKey): array
     {
         return $this->serviceWrite($localServiceId, 'suspend', [], $idempotencyKey);

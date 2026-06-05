@@ -3,6 +3,7 @@
 require_once __DIR__ . '/bootstrap.php';
 
 use PeakRack\Tests\TestCase;
+use PeakRack\Tests\SkippedTestException;
 
 $arguments = array_slice($argv, 1);
 $group = null;
@@ -55,6 +56,7 @@ $testClasses = array_values(array_filter(
 
 $passed = 0;
 $failed = 0;
+$skipped = 0;
 
 foreach ($testClasses as $testClass) {
     if ($group !== null && $testClass::group() !== $group) {
@@ -72,6 +74,10 @@ foreach ($testClasses as $testClass) {
             $instance->{$method}();
             $passed++;
             fwrite(STDOUT, "PASS {$testClass}::{$method}\n");
+        } catch (SkippedTestException $exception) {
+            $skipped++;
+            fwrite(STDOUT, "SKIP {$testClass}::{$method}\n");
+            fwrite(STDOUT, "  {$exception->getMessage()}\n");
         } catch (Throwable $exception) {
             $failed++;
             fwrite(STDERR, "FAIL {$testClass}::{$method}\n");
@@ -80,5 +86,5 @@ foreach ($testClasses as $testClass) {
     }
 }
 
-fwrite(STDOUT, sprintf("\n%d passed, %d failed\n", $passed, $failed));
+fwrite(STDOUT, sprintf("\n%d passed, %d failed, %d skipped\n", $passed, $failed, $skipped));
 exit($failed === 0 ? 0 : 1);

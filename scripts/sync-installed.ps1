@@ -87,14 +87,52 @@ function Sync-Module {
     if (-not (Test-Path -LiteralPath $SourceFull -PathType Container)) {
         throw "Source module directory is missing: $SourceFull"
     }
+
+    $RepoRelativeSource = Get-RelativePath -BasePath $RepoRoot -Path $SourceFull
+    $UntrackedSourceFiles = @(
+        & git -C $RepoRoot ls-files --others --exclude-standard -- $RepoRelativeSource
+    )
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to list untracked source files for $ModuleName."
+    }
+    $IgnoredSourceFiles = @(
+        & git -C $RepoRoot ls-files --others --ignored --exclude-standard -- $RepoRelativeSource
+    )
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to list ignored source files for $ModuleName."
+    }
+    $UnsafeSourceFiles = @()
+    $UnsafeSourceFiles += $UntrackedSourceFiles
+    $UnsafeSourceFiles += $IgnoredSourceFiles
+    $UnsafeSourceFiles = @($UnsafeSourceFiles | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($UnsafeSourceFiles.Count -gt 0) {
+        throw "Untracked or ignored production module file cannot be synchronized: $($UnsafeSourceFiles[0])"
+    }
+
+    $TrackedSourceFiles = @(& git -C $RepoRoot ls-files -- $RepoRelativeSource)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to list tracked source files for $ModuleName."
+    }
+    $SourcePrefix = $RepoRelativeSource.TrimEnd('/') + '/'
     if (-not (Test-Path -LiteralPath $Destination -PathType Container)) {
         New-Item -ItemType Directory -Path $Destination | Out-Null
     }
 
     $SourceFiles = @{}
-    foreach ($File in Get-ChildItem -LiteralPath $SourceFull -Recurse -File) {
-        $Relative = Get-RelativePath -BasePath $SourceFull -Path $File.FullName
-        $SourceFiles[$Relative] = $File.FullName
+    foreach ($RepoRelative in $TrackedSourceFiles) {
+        $Normalized = $RepoRelative.Replace('\', '/')
+        if (-not $Normalized.StartsWith($SourcePrefix, [System.StringComparison]::Ordinal)) {
+            continue
+        }
+        $Relative = $Normalized.Substring($SourcePrefix.Length)
+        $SourceFile = Join-Path $RepoRoot $RepoRelative
+        if (-not (Test-Path -LiteralPath $SourceFile -PathType Leaf)) {
+            throw "Tracked source module file is missing: $Normalized"
+        }
+        $SourceFiles[$Relative] = $SourceFile
+    }
+    if ($SourceFiles.Count -eq 0) {
+        throw "No tracked source files found for $ModuleName."
     }
 
     foreach ($InstalledFile in Get-ChildItem -LiteralPath $Destination -Recurse -File) {
@@ -123,12 +161,12 @@ function Sync-Module {
     }
     foreach ($Relative in $SourceFiles.Keys) {
         if (-not $InstalledFiles.ContainsKey($Relative)) {
-            throw "Installed file is missing for $ModuleName: $Relative"
+            throw "Installed file is missing for ${ModuleName}: $Relative"
         }
         $SourceHash = (Get-FileHash -LiteralPath $SourceFiles[$Relative] -Algorithm SHA256).Hash
         $InstalledHash = (Get-FileHash -LiteralPath $InstalledFiles[$Relative] -Algorithm SHA256).Hash
         if ($SourceHash -ne $InstalledHash) {
-            throw "Installed file hash does not match source for $ModuleName: $Relative"
+            throw "Installed file hash does not match source for ${ModuleName}: $Relative"
         }
     }
 
