@@ -69,6 +69,16 @@ final class ServiceRecord
         return $this->status;
     }
 
+    public function primaryIp(): ?string
+    {
+        return $this->primaryIp;
+    }
+
+    public function panelUrl(): ?string
+    {
+        return $this->panelUrl;
+    }
+
     public function toApiArray(): array
     {
         return [

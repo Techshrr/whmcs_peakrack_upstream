@@ -46,6 +46,30 @@ final class Operation
         return new self($id, $apiKeyId, $action, $idempotencyKey, $requestHash, self::QUEUED);
     }
 
+    public static function restore(
+        string $id,
+        int $apiKeyId,
+        string $action,
+        string $idempotencyKey,
+        string $requestHash,
+        string $status,
+        array $result = [],
+        ?string $errorCode = null,
+        ?string $errorMessage = null
+    ): self {
+        return new self(
+            $id,
+            $apiKeyId,
+            $action,
+            $idempotencyKey,
+            $requestHash,
+            $status,
+            $result,
+            $errorCode,
+            $errorMessage
+        );
+    }
+
     public function start(): self
     {
         $this->assertTransitionFrom([self::QUEUED]);
