@@ -40,13 +40,15 @@ final class CapsuleOperationRepository implements OperationRepository
                 Capsule::table(Schema::OPERATIONS)->insert([
                     'operation_id' => $operation->id(),
                     'api_key_id' => $operation->apiKeyId(),
-                    'local_service_id' => $this->localServiceId($sanitizedPayload),
+                    'local_service_id' => $operation->localServiceId(),
                     'action' => $operation->action(),
                     'idempotency_key' => $operation->idempotencyKey(),
                     'request_hash' => $operation->requestHash(),
                     'sanitized_payload_json' => $this->encode($sanitizedPayload),
                     'status' => $operation->status(),
+                    'stage' => $operation->stage(),
                     'attempt_count' => 0,
+                    'next_attempt_at' => $operation->nextAttemptAt(),
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
@@ -87,14 +89,16 @@ final class CapsuleOperationRepository implements OperationRepository
     {
         $attributes = [
             'status' => $operation->status(),
+            'stage' => $operation->stage(),
+            'attempt_count' => $operation->attemptCount(),
+            'next_attempt_at' => $operation->nextAttemptAt(),
             'result_json' => $this->encode($operation->result()),
             'last_error_code' => $operation->errorCode(),
             'last_error_message' => $operation->errorMessage(),
             'updated_at' => time(),
         ];
 
-        if ($operation->isTerminal()) {
-            $attributes['next_attempt_at'] = null;
+        if ($operation->status() !== Operation::PROCESSING || $operation->nextAttemptAt() !== null) {
             $attributes['locked_by'] = null;
             $attributes['locked_until'] = null;
         }
@@ -129,12 +133,13 @@ final class CapsuleOperationRepository implements OperationRepository
             $operations = [];
             foreach ($rows as $row) {
                 $attributes = (array) $row;
+                $attributes['attempt_count'] = ((int) $attributes['attempt_count']) + 1;
                 Capsule::table(Schema::OPERATIONS)
                     ->where('operation_id', $attributes['operation_id'])
                     ->update([
                         'locked_by' => $owner,
                         'locked_until' => $lockUntil,
-                        'attempt_count' => ((int) $attributes['attempt_count']) + 1,
+                        'attempt_count' => $attributes['attempt_count'],
                         'updated_at' => $now,
                     ]);
 
@@ -179,19 +184,13 @@ final class CapsuleOperationRepository implements OperationRepository
             (string) $row['status'],
             $this->decode($row['result_json'] ?? null),
             isset($row['last_error_code']) ? (string) $row['last_error_code'] : null,
-            isset($row['last_error_message']) ? (string) $row['last_error_message'] : null
+            isset($row['last_error_message']) ? (string) $row['last_error_message'] : null,
+            isset($row['local_service_id']) ? (int) $row['local_service_id'] : null,
+            $this->decode($row['sanitized_payload_json'] ?? null),
+            isset($row['stage']) ? (string) $row['stage'] : null,
+            (int) ($row['attempt_count'] ?? 0),
+            isset($row['next_attempt_at']) ? (int) $row['next_attempt_at'] : null
         );
-    }
-
-    private function localServiceId(array $payload): ?int
-    {
-        $value = $payload['local_service_id'] ?? null;
-        if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
-            return null;
-        }
-
-        $serviceId = (int) $value;
-        return $serviceId > 0 ? $serviceId : null;
     }
 
     private function decode(?string $json): array

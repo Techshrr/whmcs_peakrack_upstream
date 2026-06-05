@@ -32,7 +32,12 @@ final class Operation
         private readonly string $status,
         private readonly array $result = [],
         private readonly ?string $errorCode = null,
-        private readonly ?string $errorMessage = null
+        private readonly ?string $errorMessage = null,
+        private readonly ?int $localServiceId = null,
+        private readonly array $sanitizedPayload = [],
+        private readonly ?string $stage = null,
+        private readonly int $attemptCount = 0,
+        private readonly ?int $nextAttemptAt = null
     ) {
     }
 
@@ -41,9 +46,24 @@ final class Operation
         int $apiKeyId,
         string $action,
         string $idempotencyKey,
-        string $requestHash
+        string $requestHash,
+        ?int $localServiceId = null,
+        array $sanitizedPayload = []
     ): self {
-        return new self($id, $apiKeyId, $action, $idempotencyKey, $requestHash, self::QUEUED);
+        return new self(
+            $id,
+            $apiKeyId,
+            $action,
+            $idempotencyKey,
+            $requestHash,
+            self::QUEUED,
+            [],
+            null,
+            null,
+            $localServiceId,
+            $sanitizedPayload,
+            'accepted'
+        );
     }
 
     public static function restore(
@@ -55,7 +75,12 @@ final class Operation
         string $status,
         array $result = [],
         ?string $errorCode = null,
-        ?string $errorMessage = null
+        ?string $errorMessage = null,
+        ?int $localServiceId = null,
+        array $sanitizedPayload = [],
+        ?string $stage = null,
+        int $attemptCount = 0,
+        ?int $nextAttemptAt = null
     ): self {
         return new self(
             $id,
@@ -66,7 +91,12 @@ final class Operation
             $status,
             $result,
             $errorCode,
-            $errorMessage
+            $errorMessage,
+            $localServiceId,
+            $sanitizedPayload,
+            $stage,
+            $attemptCount,
+            $nextAttemptAt
         );
     }
 
@@ -76,22 +106,40 @@ final class Operation
         return $this->withStatus(self::PROCESSING);
     }
 
+    public function resumeVerification(): self
+    {
+        $this->assertTransitionFrom([self::PROCESSING]);
+        return $this->withStatus(self::PROCESSING, [], null, null, 'verify', null);
+    }
+
     public function complete(array $result): self
     {
         $this->assertTransitionFrom([self::PROCESSING]);
-        return $this->withStatus(self::COMPLETED, $result);
+        return $this->withStatus(self::COMPLETED, $result, null, null, 'completed', null);
     }
 
     public function fail(string $code, string $message): self
     {
         $this->assertTransitionFrom([self::PROCESSING]);
-        return $this->withStatus(self::FAILED, [], $code, $message);
+        return $this->withStatus(self::FAILED, [], $code, $message, 'failed', null);
     }
 
     public function manualReview(string $code, string $message): self
     {
         $this->assertTransitionFrom([self::PROCESSING]);
-        return $this->withStatus(self::MANUAL_REVIEW, [], $code, $message);
+        return $this->withStatus(self::MANUAL_REVIEW, [], $code, $message, 'manual_review', null);
+    }
+
+    public function retry(string $code, string $message, int $nextAttemptAt): self
+    {
+        $this->assertTransitionFrom([self::QUEUED, self::PROCESSING]);
+        return $this->withStatus(self::QUEUED, [], $code, $message, 'retry', $nextAttemptAt);
+    }
+
+    public function awaitVerification(string $code, string $message, int $nextAttemptAt): self
+    {
+        $this->assertTransitionFrom([self::PROCESSING]);
+        return $this->withStatus(self::PROCESSING, [], $code, $message, 'verify', $nextAttemptAt);
     }
 
     public function id(): string
@@ -139,6 +187,36 @@ final class Operation
         return $this->errorMessage;
     }
 
+    public function localServiceId(): ?int
+    {
+        return $this->localServiceId;
+    }
+
+    public function sanitizedPayload(): array
+    {
+        return $this->sanitizedPayload;
+    }
+
+    public function stage(): ?string
+    {
+        return $this->stage;
+    }
+
+    public function attemptCount(): int
+    {
+        return $this->attemptCount;
+    }
+
+    public function nextAttemptAt(): ?int
+    {
+        return $this->nextAttemptAt;
+    }
+
+    public function requiresVerification(): bool
+    {
+        return $this->stage === 'verify';
+    }
+
     public function isTerminal(): bool
     {
         return in_array($this->status, [self::COMPLETED, self::FAILED, self::MANUAL_REVIEW], true);
@@ -159,7 +237,9 @@ final class Operation
         string $status,
         array $result = [],
         ?string $errorCode = null,
-        ?string $errorMessage = null
+        ?string $errorMessage = null,
+        ?string $stage = null,
+        ?int $nextAttemptAt = null
     ): self {
         return new self(
             $this->id,
@@ -170,7 +250,12 @@ final class Operation
             $status,
             $result,
             $errorCode,
-            $errorMessage
+            $errorMessage,
+            $this->localServiceId,
+            $this->sanitizedPayload,
+            $stage ?? $this->stage,
+            $this->attemptCount,
+            $nextAttemptAt
         );
     }
 }
