@@ -49,10 +49,11 @@ final class ActivationService
                     $preconditionErrors = array_map('strval', $reported);
                 }
             }
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
             return [
                 'status' => 'error',
-                'description' => 'The PeakRack upstream database schema could not be installed.',
+                'description' => 'The PeakRack upstream database schema could not be installed. '
+                    . $this->sanitizeFailureMessage($exception->getMessage()),
             ];
         }
 
@@ -76,5 +77,16 @@ final class ActivationService
             'status' => 'success',
             'description' => 'PeakRack Upstream API deactivated. Addon data was preserved.',
         ];
+    }
+
+    private function sanitizeFailureMessage(string $message): string
+    {
+        $message = preg_replace('/\s+/', ' ', $message) ?? '';
+        $message = trim($message);
+        if ($message === '') {
+            return 'Check the WHMCS activity log and database permissions.';
+        }
+
+        return substr($message, 0, 240);
     }
 }

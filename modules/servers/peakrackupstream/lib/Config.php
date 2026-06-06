@@ -20,4 +20,6 @@ final class Config
     public const DEFAULT_TIMEOUT = 30;
     public const MINIMUM_TIMEOUT = 5;
     public const MAXIMUM_TIMEOUT = 120;
+    public const MAX_IDEMPOTENCY_KEY_LENGTH = 160;
+    public const MAX_NONCE_LENGTH = 128;
 }

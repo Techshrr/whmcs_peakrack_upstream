@@ -5,6 +5,7 @@ namespace PeakRack\Tests\Unit\Upstream;
 use PeakRack\Tests\TestCase;
 use PeakRack\UpstreamApi\Admin\ActivationService;
 use PeakRack\UpstreamApi\Support\Compatibility;
+use RuntimeException;
 
 final class AddonEntryTest extends TestCase
 {
@@ -62,5 +63,21 @@ final class AddonEntryTest extends TestCase
         $this->assertSame(1, $installCount);
         $this->assertStringContains('Automatic Credit Use', $result['description']);
         $this->assertStringContains('System Health', $result['description']);
+    }
+
+    public function testActivationReportsSanitizedSchemaFailureDetails(): void
+    {
+        $service = new ActivationService(static function (): void {
+            throw new RuntimeException(
+                "SQLSTATE[42000]: Specified key was too long; max key length is 767 bytes\nwith newline"
+            );
+        });
+
+        $result = $service->activate('8.3.0', '9.0.3');
+
+        $this->assertSame('error', $result['status']);
+        $this->assertStringContains('database schema could not be installed', $result['description']);
+        $this->assertStringContains('Specified key was too long', $result['description']);
+        $this->assertStringNotContains("\n", $result['description']);
     }
 }

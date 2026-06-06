@@ -121,9 +121,15 @@ final class AuthenticatorTest extends TestCase
             'AUTHENTICATION_FAILED',
             400
         );
+        $this->assertApiError(
+            $authenticator,
+            $this->signedWriteRequest('write-too-long', str_repeat('a', 161)),
+            'AUTHENTICATION_FAILED',
+            400
+        );
 
         $authenticated = $authenticator->authenticate(
-            $this->signedWriteRequest('write-valid', 'service:create:123')
+            $this->signedWriteRequest('write-valid', str_repeat('a', 160))
         );
         $this->assertSame(7, $authenticated['id']);
     }

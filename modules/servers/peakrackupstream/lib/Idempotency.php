@@ -116,7 +116,7 @@ final class Idempotency
 
     private function persist(string $key): string
     {
-        if (preg_match('/^[A-Za-z0-9._:-]{1,191}$/', $key) !== 1) {
+        if (preg_match('/^[A-Za-z0-9._:-]{1,' . Config::MAX_IDEMPOTENCY_KEY_LENGTH . '}$/', $key) !== 1) {
             throw new RuntimeException('The generated idempotency key is invalid.');
         }
         $this->properties->save([ServiceProperties::CURRENT_IDEMPOTENCY_KEY => $key]);

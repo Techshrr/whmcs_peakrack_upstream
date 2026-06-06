@@ -25,6 +25,8 @@ final class Schema
     public const EVENTS = 'mod_peakrack_upstream_operation_events';
     public const NONCES = 'mod_peakrack_upstream_nonces';
     public const LOCKS = 'mod_peakrack_upstream_worker_locks';
+    public const IDEMPOTENCY_KEY_LENGTH = 160;
+    public const NONCE_LENGTH = 128;
 
     public static function definitions(): array
     {
@@ -154,7 +156,7 @@ final class Schema
                 $table->unsignedBigInteger('api_key_id')->index();
                 $table->unsignedInteger('local_service_id')->nullable()->index();
                 $table->string('action', 64)->index();
-                $table->string('idempotency_key', 191);
+                $table->string('idempotency_key', self::IDEMPOTENCY_KEY_LENGTH);
                 $table->char('request_hash', 64);
                 $table->text('sanitized_payload_json')->nullable();
                 $table->string('status', 32)->index();
@@ -187,7 +189,7 @@ final class Schema
             $schema->create(self::NONCES, static function (Blueprint $table): void {
                 $table->bigIncrements('id');
                 $table->unsignedBigInteger('api_key_id')->index();
-                $table->string('nonce', 191);
+                $table->string('nonce', self::NONCE_LENGTH);
                 $table->unsignedBigInteger('expires_at')->index();
                 $table->unsignedBigInteger('created_at');
                 $table->unique(['api_key_id', 'nonce']);

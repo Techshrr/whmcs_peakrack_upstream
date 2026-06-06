@@ -16,6 +16,7 @@ namespace PeakRack\Upstream\Api;
 use Closure;
 use InvalidArgumentException;
 use JsonException;
+use PeakRack\Upstream\Config;
 use PeakRack\Upstream\Logger;
 use PeakRack\Upstream\Validator;
 use RuntimeException;
@@ -140,7 +141,10 @@ final class ApiClient implements ApiClientInterface
         ?array $payload = null,
         ?string $idempotencyKey = null
     ): array {
-        if ($idempotencyKey !== null && preg_match('/^[A-Za-z0-9._:-]{1,191}$/', $idempotencyKey) !== 1) {
+        if (
+            $idempotencyKey !== null
+            && preg_match('/^[A-Za-z0-9._:-]{1,' . Config::MAX_IDEMPOTENCY_KEY_LENGTH . '}$/', $idempotencyKey) !== 1
+        ) {
             throw new InvalidArgumentException('The idempotency key is invalid.');
         }
 
@@ -148,7 +152,7 @@ final class ApiClient implements ApiClientInterface
         $path = $this->basePath . $endpoint;
         $timestamp = (int) ($this->clock)();
         $nonce = (string) ($this->nonceGenerator)();
-        if ($timestamp < 1 || preg_match('/^[A-Za-z0-9._:-]{1,191}$/', $nonce) !== 1) {
+        if ($timestamp < 1 || preg_match('/^[A-Za-z0-9._:-]{1,' . Config::MAX_NONCE_LENGTH . '}$/', $nonce) !== 1) {
             throw new RuntimeException('Unable to generate valid API authentication values.');
         }
 

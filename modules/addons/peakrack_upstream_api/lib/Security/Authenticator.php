@@ -18,6 +18,7 @@ use PeakRack\UpstreamApi\Config;
 use PeakRack\UpstreamApi\Contracts\ApiKeyRepository;
 use PeakRack\UpstreamApi\Contracts\Clock;
 use PeakRack\UpstreamApi\Contracts\NonceRepository;
+use PeakRack\UpstreamApi\Database\Schema;
 use PeakRack\UpstreamApi\Domain\ApiError;
 use PeakRack\UpstreamApi\Domain\ValidationException;
 use PeakRack\UpstreamApi\Http\Request;
@@ -102,9 +103,12 @@ final class Authenticator
         if (
             preg_match('/^[A-Za-z0-9._-]{1,128}$/', $publicKey) !== 1
             || preg_match('/^[0-9]{1,12}$/', $timestamp) !== 1
-            || preg_match('/^[A-Za-z0-9._:-]{1,191}$/', $nonce) !== 1
+            || preg_match('/^[A-Za-z0-9._:-]{1,' . Schema::NONCE_LENGTH . '}$/', $nonce) !== 1
             || preg_match('/^[0-9a-f]{64}$/', $signature) !== 1
-            || ($request->method() !== 'GET' && preg_match('/^[A-Za-z0-9._:-]{1,191}$/', $idempotencyKey) !== 1)
+            || (
+                $request->method() !== 'GET'
+                && preg_match('/^[A-Za-z0-9._:-]{1,' . Schema::IDEMPOTENCY_KEY_LENGTH . '}$/', $idempotencyKey) !== 1
+            )
         ) {
             throw new ValidationException(ApiError::AUTHENTICATION_FAILED, 'The authentication headers are invalid.', 400);
         }

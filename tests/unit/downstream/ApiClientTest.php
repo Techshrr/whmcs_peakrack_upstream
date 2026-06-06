@@ -4,6 +4,7 @@ namespace PeakRack\Tests\Unit\Downstream;
 
 use InvalidArgumentException;
 use PeakRack\Tests\TestCase;
+use PeakRack\Upstream\Config;
 use PeakRack\Upstream\Api\ApiClient;
 use PeakRack\Upstream\Api\ApiException;
 use PeakRack\Upstream\Api\RequestSigner;
@@ -70,6 +71,32 @@ final class ApiClientTest extends TestCase
         $this->assertThrows(
             fn () => new ApiClient('https://user@upstream.example.test/api/v1', 'key', 'secret', 30, $transport),
             InvalidArgumentException::class
+        );
+    }
+
+    public function testRejectsHeadersLongerThanUpstreamSchemaLimits(): void
+    {
+        $transport = static fn (): array => [];
+
+        $this->assertSame(160, Config::MAX_IDEMPOTENCY_KEY_LENGTH);
+        $this->assertSame(128, Config::MAX_NONCE_LENGTH);
+        $this->assertThrows(
+            fn () => $this->client($transport)->suspendService(123, str_repeat('a', 161)),
+            InvalidArgumentException::class,
+            'idempotency key'
+        );
+        $this->assertThrows(
+            fn () => (new ApiClient(
+                baseUrl: 'https://upstream.example.test/api/v1',
+                apiKey: 'key',
+                apiSecret: 'secret',
+                timeout: 30,
+                transport: $transport,
+                clock: static fn (): int => 1710000000,
+                nonceGenerator: static fn (): string => str_repeat('n', 129)
+            ))->health(),
+            \RuntimeException::class,
+            'authentication values'
         );
     }
 

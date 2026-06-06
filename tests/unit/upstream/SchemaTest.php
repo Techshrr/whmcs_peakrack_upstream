@@ -56,4 +56,10 @@ final class SchemaTest extends TestCase
         $this->assertContains('next_attempt_at', $operations);
         $this->assertContains('last_error_code', $operations);
     }
+
+    public function testCompositeUniqueStringColumnsFitLegacyInnoDbIndexLimits(): void
+    {
+        $this->assertSame(160, Schema::IDEMPOTENCY_KEY_LENGTH);
+        $this->assertSame(128, Schema::NONCE_LENGTH);
+    }
 }
