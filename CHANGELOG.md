@@ -20,6 +20,7 @@ This project follows Semantic Versioning where practical.
 
 - Upstream Addon activation now installs the module while reporting unsafe Credit settings through the activation message and System Health. API operations remain blocked until `Automatic Credit Use` and `Credit on Downgrade` are disabled.
 - Reduced composite unique index string lengths used by idempotency and nonce tables for older MySQL/MariaDB InnoDB index compatibility.
+- Added explicit short database index names and repair of missing unique indexes after a failed partial schema install.
 - Schema activation failures now include a short sanitized database error summary to help administrators identify local database compatibility or permission problems.
 
 ### Security

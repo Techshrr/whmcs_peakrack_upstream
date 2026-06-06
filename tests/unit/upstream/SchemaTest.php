@@ -62,4 +62,40 @@ final class SchemaTest extends TestCase
         $this->assertSame(160, Schema::IDEMPOTENCY_KEY_LENGTH);
         $this->assertSame(128, Schema::NONCE_LENGTH);
     }
+
+    public function testIndexesUseExplicitMysqlSafeNames(): void
+    {
+        $indexes = Schema::indexDefinitions();
+
+        $this->assertContains(
+            ['columns' => ['api_key_id', 'idempotency_key'], 'name' => 'pru_op_key_idem_uq'],
+            $indexes[Schema::OPERATIONS]['unique']
+        );
+        $this->assertContains(
+            ['columns' => ['api_key_id', 'nonce'], 'name' => 'pru_nonce_key_nonce_uq'],
+            $indexes[Schema::NONCES]['unique']
+        );
+
+        foreach ($indexes as $table => $groups) {
+            foreach ($groups as $type => $definitions) {
+                foreach ($definitions as $definition) {
+                    $this->assertTrue(
+                        strlen($definition['name']) <= 64,
+                        sprintf('%s %s index name is too long: %s', $table, $type, $definition['name'])
+                    );
+                }
+            }
+        }
+
+        $schemaSource = file_get_contents(dirname(__DIR__, 3) . '/modules/addons/peakrack_upstream_api/lib/Database/Schema.php');
+        $this->assertTrue(is_string($schemaSource));
+        $this->assertFalse(
+            (bool) preg_match('/->(?:unique|index)\(\s*\)/', $schemaSource),
+            'Schema indexes must not rely on auto-generated names.'
+        );
+        $this->assertFalse(
+            (bool) preg_match('/->(?:unique|index)\(\s*\[[^\)]*\]\s*\)/s', $schemaSource),
+            'Composite schema indexes must use explicit names.'
+        );
+    }
 }
