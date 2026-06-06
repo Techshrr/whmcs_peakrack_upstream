@@ -46,7 +46,7 @@ final class AddonEntryTest extends TestCase
         $this->assertStringContains('preserved', strtolower($deactivated['description']));
     }
 
-    public function testActivationRejectsUnsafeCreditSettingsBeforeInstalling(): void
+    public function testActivationAllowsUnsafeCreditSettingsButReportsRequiredFixes(): void
     {
         $installCount = 0;
         $service = new ActivationService(
@@ -58,8 +58,9 @@ final class AddonEntryTest extends TestCase
 
         $result = $service->activate('8.3.0', '9.0.3');
 
-        $this->assertSame('error', $result['status']);
-        $this->assertSame(0, $installCount);
+        $this->assertSame('success', $result['status']);
+        $this->assertSame(1, $installCount);
         $this->assertStringContains('Automatic Credit Use', $result['description']);
+        $this->assertStringContains('System Health', $result['description']);
     }
 }

@@ -38,21 +38,29 @@ final class ActivationService
             ];
         }
 
+        $preconditionErrors = [];
+
         try {
+            ($this->installSchema)();
+
             if ($this->preconditions !== null) {
-                $preconditionErrors = ($this->preconditions)();
-                if (is_array($preconditionErrors) && $preconditionErrors !== []) {
-                    return [
-                        'status' => 'error',
-                        'description' => implode(' ', array_map('strval', $preconditionErrors)),
-                    ];
+                $reported = ($this->preconditions)();
+                if (is_array($reported)) {
+                    $preconditionErrors = array_map('strval', $reported);
                 }
             }
-            ($this->installSchema)();
         } catch (Throwable) {
             return [
                 'status' => 'error',
                 'description' => 'The PeakRack upstream database schema could not be installed.',
+            ];
+        }
+
+        if ($preconditionErrors !== []) {
+            return [
+                'status' => 'success',
+                'description' => 'PeakRack Upstream API activated. System Health requires attention: '
+                    . implode(' ', $preconditionErrors),
             ];
         }
 

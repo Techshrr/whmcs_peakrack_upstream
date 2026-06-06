@@ -118,6 +118,9 @@ final class DocumentationTest extends TestCase
             'SPDX-License-Identifier: Apache-2.0',
             'System.Management.Automation.Language.Parser',
             'ls-files --others --exclude-standard',
+            'InstallPath',
+            'peakrackupstream-whmcs-root',
+            'modules/servers/peakrackupstream',
         ] as $required) {
             $this->assertStringContains($required, $release);
         }
@@ -138,6 +141,30 @@ final class DocumentationTest extends TestCase
         $this->assertStringContains('8.2', $workflow);
         $this->assertStringContains('8.3', $workflow);
         $this->assertStringContains('scripts/check-release.ps1', $workflow);
+    }
+
+    public function testReadmesDocumentWhmcsRootPackagesAndExactDownstreamModuleName(): void
+    {
+        $english = (string) file_get_contents(PEAKRACK_UPSTREAM_ROOT . '/README.md');
+        $chinese = (string) file_get_contents(PEAKRACK_UPSTREAM_ROOT . '/README.zh-CN.md');
+
+        foreach ([
+            'peakrackupstream-whmcs-root-v',
+            'Extract this package from the downstream WHMCS root',
+            'technical module name is `peakrackupstream`',
+            'single lowercase word',
+        ] as $required) {
+            $this->assertStringContains($required, $english);
+        }
+
+        foreach ([
+            'peakrackupstream-whmcs-root-v',
+            '在下游 WHMCS 根目录解压',
+            '技术模块名是 `peakrackupstream`',
+            '单个小写单词',
+        ] as $required) {
+            $this->assertStringContains($required, $chinese);
+        }
     }
 
     public function testDownstreamCronPrioritizesPendingServicesBeforeApplyingTheBatchLimit(): void

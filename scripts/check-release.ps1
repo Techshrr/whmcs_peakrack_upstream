@@ -179,11 +179,15 @@ $Packages = @(
         Name = 'peakrack-upstream-api'
         Source = 'modules/addons/peakrack_upstream_api'
         Folder = 'peakrack_upstream_api'
+        InstallPath = 'modules/addons/peakrack_upstream_api'
+        RootName = 'peakrack-upstream-api-whmcs-root'
     },
     @{
         Name = 'peakrackupstream'
         Source = 'modules/servers/peakrackupstream'
         Folder = 'peakrackupstream'
+        InstallPath = 'modules/servers/peakrackupstream'
+        RootName = 'peakrackupstream-whmcs-root'
     }
 )
 
@@ -230,6 +234,28 @@ foreach ($Package in $Packages) {
     $Checksum = "$Hash  $([System.IO.Path]::GetFileName($Zip))"
     Set-Content -LiteralPath ($Zip + '.sha256') -Value $Checksum -Encoding ascii
     Remove-Item -LiteralPath $Stage -Recurse -Force
+
+    $RootStage = Join-Path $PackageRoot ('stage-' + $Package.RootName)
+    $RootStageModule = Join-Path $RootStage $Package.InstallPath
+    New-Item -ItemType Directory -Path $RootStageModule | Out-Null
+
+    foreach ($RelativePath in $TrackedPackageFiles) {
+        $Normalized = $RelativePath.Replace('\', '/')
+        $InsidePackage = $Normalized.Substring($SourcePrefix.Length)
+        $DestinationFile = Join-Path $RootStageModule $InsidePackage
+        $DestinationDirectory = Split-Path -Parent $DestinationFile
+        if (-not (Test-Path -LiteralPath $DestinationDirectory -PathType Container)) {
+            New-Item -ItemType Directory -Path $DestinationDirectory -Force | Out-Null
+        }
+        Copy-Item -LiteralPath (Join-Path $Root $RelativePath) -Destination $DestinationFile -Force
+    }
+
+    $RootZip = Join-Path $PackageRoot ($Package.RootName + '-v' + $Version + '.zip')
+    Compress-Archive -LiteralPath (Join-Path $RootStage 'modules') -DestinationPath $RootZip -CompressionLevel Optimal
+    $RootHash = (Get-FileHash -LiteralPath $RootZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    $RootChecksum = "$RootHash  $([System.IO.Path]::GetFileName($RootZip))"
+    Set-Content -LiteralPath ($RootZip + '.sha256') -Value $RootChecksum -Encoding ascii
+    Remove-Item -LiteralPath $RootStage -Recurse -Force
 }
 
 Write-Host "Release checks completed. Packages: $PackageRoot"

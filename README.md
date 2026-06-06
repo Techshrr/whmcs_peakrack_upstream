@@ -52,14 +52,23 @@ The source is readable PHP and does not require ionCube.
    `/modules/servers/peakrackupstream/`
 
 4. In the upstream WHMCS admin area, activate **PeakRack Upstream API** under Addon Modules.
-5. Confirm that `Automatic Credit Use` and `Credit on Downgrade` are disabled. Activation rejects either unsafe setting.
+5. Confirm that `Automatic Credit Use` and `Credit on Downgrade` are disabled. The Addon can be activated while either setting is still enabled, but System Health and API operations will continue to report blocking errors until both settings are disabled.
 6. Configure the Addon payment method and worker batch size.
 7. Create an API key for the reseller client. Store the API secret when it is displayed because it is not listed again.
 8. Create at least one product policy for the API key. The upstream product must have pricing for the reseller currency and an assigned Provisioning Module.
-9. In the downstream WHMCS admin area, create a server using module **PeakRack Upstream**, then assign it to downstream products.
+9. In the downstream WHMCS admin area, create a server using module **PeakRack Upstream**, then assign it to downstream products. The technical module name is `peakrackupstream`, a single lowercase word required by WHMCS Provisioning Module naming rules.
 10. Install both Cron entries shown below.
 
 No WHMCS core files are modified.
+
+### Release Package Types
+
+Each module is packaged in two layouts:
+
+- `peakrack-upstream-api-v1.0.0.zip` and `peakrackupstream-v1.0.0.zip` contain only the module directory. Extract or copy them into the matching parent directory: `/modules/addons/` for the upstream Addon and `/modules/servers/` for the downstream Provisioning Module.
+- `peakrack-upstream-api-whmcs-root-v1.0.0.zip` and `peakrackupstream-whmcs-root-v1.0.0.zip` contain the `modules/...` path. Extract this package from the upstream or downstream WHMCS root.
+
+For downstream installation, extracting `peakrackupstream-v1.0.0.zip` directly from the WHMCS root creates the wrong path and WHMCS will not list the module. Extract this package from the downstream WHMCS root: `peakrackupstream-whmcs-root-v1.0.0.zip`. Alternatively, place the `peakrackupstream` directory directly under `/modules/servers/`.
 
 ## Upstream Addon Configuration
 

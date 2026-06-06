@@ -14,6 +14,11 @@ This project follows Semantic Versioning where practical.
 - Added upstream WHMCS Credit billing flows for create, renew, and package change, including confirmed create-failure compensation.
 - Added the downstream `peakrackupstream` Provisioning Module with lifecycle functions, read-only Client Area output, optional SSO, and pull-based status synchronization.
 - Added unit tests, mock API contract tests, release packaging checks, and installation-tree synchronization tooling.
+- Added WHMCS-root release package layouts for both modules so administrators can extract packages from the WHMCS root without creating the wrong module path.
+
+### Changed
+
+- Upstream Addon activation now installs the module while reporting unsafe Credit settings through the activation message and System Health. API operations remain blocked until `Automatic Credit Use` and `Credit on Downgrade` are disabled.
 
 ### Security
 

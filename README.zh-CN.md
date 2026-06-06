@@ -52,14 +52,23 @@
    `/modules/servers/peakrackupstream/`
 
 4. 在上游 WHMCS 后台的 Addon Modules 中启用 **PeakRack Upstream API**。
-5. 确认 `Automatic Credit Use` 与 `Credit on Downgrade` 均已关闭；任一设置开启时，模块会拒绝激活。
+5. 确认 `Automatic Credit Use` 与 `Credit on Downgrade` 均已关闭。即使其中任一设置仍开启，Addon 也可以完成启用，但 System Health 与 API 操作会继续报告阻断错误，直到两项设置都关闭。
 6. 配置 Addon 使用的订单支付方式和 Worker 批量大小。
 7. 为经销商客户创建 API Key，并立即保存只显示一次的 API Secret。
 8. 为 API Key 创建至少一条产品策略。上游产品必须有经销商币种价格，并已绑定 Provisioning Module。
-9. 在下游 WHMCS 创建使用 **PeakRack Upstream** 模块的服务器，再将其分配给下游产品。
+9. 在下游 WHMCS 创建使用 **PeakRack Upstream** 模块的服务器，再将其分配给下游产品。技术模块名是 `peakrackupstream`，这是 WHMCS Provisioning Module 命名规则要求的单个小写单词。
 10. 配置下文两个 Cron。
 
 模块不会修改 WHMCS 核心文件。
+
+### 发布包类型
+
+每个模块都会生成两种结构的安装包：
+
+- `peakrack-upstream-api-v1.0.0.zip` 与 `peakrackupstream-v1.0.0.zip` 只包含模块目录。请将其解压或复制到对应父目录：上游 Addon 放到 `/modules/addons/`，下游 Provisioning Module 放到 `/modules/servers/`。
+- `peakrack-upstream-api-whmcs-root-v1.0.0.zip` 与 `peakrackupstream-whmcs-root-v1.0.0.zip` 包含 `modules/...` 路径。请在上游或下游 WHMCS 根目录解压。
+
+下游安装时，如果直接在 WHMCS 根目录解压 `peakrackupstream-v1.0.0.zip`，会生成错误路径，WHMCS 后台不会显示该模块。请在下游 WHMCS 根目录解压 `peakrackupstream-whmcs-root-v1.0.0.zip`，或把 `peakrackupstream` 目录直接放到 `/modules/servers/` 下。
 
 ## 上游 Addon 配置
 
