@@ -162,6 +162,53 @@ final class AdminControllerTest extends TestCase
         $this->assertSame(1, $policies->saved[0]['destroy_allowed']);
     }
 
+    public function testPolicySaveAcceptsAdminFriendlyListInputs(): void
+    {
+        [$controller, , $policies, , $session] = $this->controller();
+        $controller->dispatch([
+            'page' => 'product_policies',
+            'action' => 'save_policy',
+            'csrf_token' => $session['peakrack_upstream_api_csrf'],
+            'api_key_id' => 2,
+            'product_id' => 3,
+            'billing_cycles' => 'monthly',
+            'actions' => 'create, renew, suspend, unsuspend, terminate, change_package',
+            'locations' => '',
+            'os_templates' => '',
+            'delivery_mappings' => '',
+            'sso_hosts' => '',
+        ], 1, $session, 'addonmodules.php?module=test');
+
+        $this->assertSame(['monthly'], $policies->saved[0]['billing_cycles']);
+        $this->assertSame(
+            ['create', 'renew', 'suspend', 'unsuspend', 'terminate', 'change_package'],
+            $policies->saved[0]['actions']
+        );
+        $this->assertSame([], $policies->saved[0]['locations']);
+        $this->assertSame([], $policies->saved[0]['sso_hosts']);
+    }
+
+    public function testPolicySaveAcceptsSlashEscapedJsonFromWhmcsRequestLayer(): void
+    {
+        [$controller, , $policies, , $session] = $this->controller();
+        $controller->dispatch([
+            'page' => 'product_policies',
+            'action' => 'save_policy',
+            'csrf_token' => $session['peakrack_upstream_api_csrf'],
+            'api_key_id' => 2,
+            'product_id' => 3,
+            'billing_cycles' => '[\"monthly\"]',
+            'actions' => '[\"create\",\"renew\"]',
+            'locations' => '{}',
+            'os_templates' => '{}',
+            'delivery_mappings' => '{}',
+            'sso_hosts' => '[]',
+        ], 1, $session, 'addonmodules.php?module=test');
+
+        $this->assertSame(['monthly'], $policies->saved[0]['billing_cycles']);
+        $this->assertSame(['create', 'renew'], $policies->saved[0]['actions']);
+    }
+
     public function testManualReviewRetryIsExplicitAndAudited(): void
     {
         [$controller, , , $state, $session, $operations] = $this->controller();

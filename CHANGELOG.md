@@ -22,6 +22,7 @@ This project follows Semantic Versioning where practical.
 - Reduced composite unique index string lengths used by idempotency and nonce tables for older MySQL/MariaDB InnoDB index compatibility.
 - Added explicit short database index names and repair of missing unique indexes after a failed partial schema install.
 - Schema activation failures now include a short sanitized database error summary to help administrators identify local database compatibility or permission problems.
+- Product Policy list fields now accept JSON, comma-separated values, single values, and slash-escaped JSON submitted by the WHMCS request layer.
 
 ### Security
 

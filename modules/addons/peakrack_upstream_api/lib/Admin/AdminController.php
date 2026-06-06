@@ -210,12 +210,12 @@ final class AdminController
             'api_key_id' => $this->positiveInt($request, 'api_key_id'),
             'product_id' => $this->positiveInt($request, 'product_id'),
             'enabled' => $this->boolean($request['enabled'] ?? '1') ? 1 : 0,
-            'billing_cycles' => $this->jsonArray($request, 'billing_cycles'),
-            'actions' => $this->jsonArray($request, 'actions'),
-            'locations' => $this->jsonArray($request, 'locations'),
-            'os_templates' => $this->jsonArray($request, 'os_templates'),
-            'delivery_mappings' => $this->jsonArray($request, 'delivery_mappings'),
-            'sso_hosts' => $this->jsonArray($request, 'sso_hosts'),
+            'billing_cycles' => $this->stringList($request, 'billing_cycles'),
+            'actions' => $this->stringList($request, 'actions'),
+            'locations' => $this->jsonArray($request, 'locations', true),
+            'os_templates' => $this->jsonArray($request, 'os_templates', true),
+            'delivery_mappings' => $this->jsonArray($request, 'delivery_mappings', true),
+            'sso_hosts' => $this->stringList($request, 'sso_hosts'),
             'sso_allowed' => $this->boolean($request['sso_allowed'] ?? null) ? 1 : 0,
             'destroy_allowed' => $this->boolean($request['destroy_allowed'] ?? null) ? 1 : 0,
         ];
@@ -287,7 +287,30 @@ final class AdminController
         }
     }
 
-    private function jsonArray(array $request, string $key): array
+    private function stringList(array $request, string $key): array
+    {
+        $value = $request[$key] ?? null;
+        if (is_array($value)) {
+            return $this->normalizeStringList($value, $key);
+        }
+        if (!is_string($value)) {
+            throw new InvalidArgumentException("The {$key} value must be a list.");
+        }
+
+        $value = trim($this->normalizeSubmittedString($value));
+        if ($value === '') {
+            return [];
+        }
+
+        $decoded = $this->decodeJsonArray($value, $key, false);
+        if ($decoded !== null) {
+            return $this->normalizeStringList($decoded, $key);
+        }
+
+        return $this->normalizeStringList(preg_split('/[\r\n,]+/', $value) ?: [], $key);
+    }
+
+    private function jsonArray(array $request, string $key, bool $allowEmptyString = false): array
     {
         $value = $request[$key] ?? null;
         if (is_array($value)) {
@@ -297,17 +320,67 @@ final class AdminController
             throw new InvalidArgumentException("The {$key} value must be JSON.");
         }
 
-        try {
-            $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
+        $value = trim($this->normalizeSubmittedString($value));
+        if ($value === '' && $allowEmptyString) {
+            return [];
+        }
+
+        return $this->decodeJsonArray($value, $key, true) ?? [];
+    }
+
+    private function decodeJsonArray(string $value, string $key, bool $required): ?array
+    {
+        $candidates = [$value];
+        $stripped = stripslashes($value);
+        if ($stripped !== $value) {
+            $candidates[] = $stripped;
+        }
+
+        foreach (array_values(array_unique($candidates)) as $candidate) {
+            if (trim($candidate) === '') {
+                continue;
+            }
+
+            try {
+                $decoded = json_decode($candidate, true, 512, JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                continue;
+            }
+
+            if (!is_array($decoded)) {
+                throw new InvalidArgumentException("The {$key} value must decode to an array or object.");
+            }
+
+            return $decoded;
+        }
+
+        if ($required || preg_match('/^\s*[\[{]/', $value) === 1) {
             throw new InvalidArgumentException("The {$key} value must contain valid JSON.");
         }
 
-        if (!is_array($decoded)) {
-            throw new InvalidArgumentException("The {$key} value must decode to an array or object.");
+        return null;
+    }
+
+    private function normalizeSubmittedString(string $value): string
+    {
+        return html_entity_decode($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    private function normalizeStringList(array $values, string $key): array
+    {
+        $normalized = [];
+        foreach ($values as $value) {
+            if (!is_scalar($value)) {
+                throw new InvalidArgumentException("The {$key} value must contain only scalar list entries.");
+            }
+
+            $entry = trim((string) $value);
+            if ($entry !== '') {
+                $normalized[] = $entry;
+            }
         }
 
-        return $decoded;
+        return array_values(array_unique($normalized));
     }
 
     private function positiveInt(array $source, string $key): int
