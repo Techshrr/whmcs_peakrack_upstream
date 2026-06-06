@@ -1,0 +1,15 @@
+* text=auto
+*.php text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.xml text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.ps1 text eol=crlf
+*.tpl text eol=lf
+LICENSE text eol=lf
+NOTICE text eol=lf
+VERSION text eol=lf

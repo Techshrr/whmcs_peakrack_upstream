@@ -1,1 +1,16 @@
 .worktrees/
+release-packages/
+*.zip
+*.sha256
+.env
+.env.*
+!.env.example
+*.log
+*.tmp
+*.bak
+*.swp
+*.old
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
