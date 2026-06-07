@@ -16,6 +16,8 @@ use PeakRack\UpstreamApi\Admin\AdminController;
 use PeakRack\UpstreamApi\Admin\Csrf;
 use PeakRack\UpstreamApi\Admin\OnboardingAdminController;
 use PeakRack\UpstreamApi\Admin\TemplateRenderer;
+use PeakRack\UpstreamApi\Application\CredentialService;
+use PeakRack\UpstreamApi\Application\OnboardingService;
 use PeakRack\UpstreamApi\Bootstrap;
 use PeakRack\UpstreamApi\Config;
 use PeakRack\UpstreamApi\Database\CapsuleApplicationRepository;
@@ -24,6 +26,7 @@ use PeakRack\UpstreamApi\Database\CapsuleApiKeyRepository;
 use PeakRack\UpstreamApi\Database\CapsuleOperationRepository;
 use PeakRack\UpstreamApi\Database\CapsulePolicyTemplateRepository;
 use PeakRack\UpstreamApi\Database\CapsulePolicyRepository;
+use PeakRack\UpstreamApi\Database\CapsuleSecretResetRepository;
 use PeakRack\UpstreamApi\Database\Schema;
 use PeakRack\UpstreamApi\Support\UuidGenerator;
 use WHMCS\Database\Capsule;
@@ -108,10 +111,18 @@ function peakrack_upstream_api_output(array $vars): void
 
 function peakrack_upstream_api_onboarding_admin_controller(): OnboardingAdminController
 {
+    $applications = new CapsuleApplicationRepository();
+    $keys = new CapsuleApiKeyRepository();
+    $policies = new CapsulePolicyRepository();
+    $templates = new CapsulePolicyTemplateRepository();
+    $audits = new CapsuleAuditRepository();
+    $resets = new CapsuleSecretResetRepository();
+    $clock = static fn (): int => time();
+
     return new OnboardingAdminController(
-        applications: new CapsuleApplicationRepository(),
-        templates: new CapsulePolicyTemplateRepository(),
-        audits: new CapsuleAuditRepository(),
+        applications: $applications,
+        templates: $templates,
+        audits: $audits,
         csrf: new Csrf(),
         policyValidator: static function (array $policy): void {
             $product = Capsule::table('tblproducts')->where('id', (int) $policy['product_id'])->first();
@@ -119,7 +130,46 @@ function peakrack_upstream_api_onboarding_admin_controller(): OnboardingAdminCon
                 throw new InvalidArgumentException('The product must exist and have a Provisioning Module assigned.');
             }
         },
-        clock: static fn (): int => time()
+        clock: $clock,
+        onboarding: new OnboardingService(
+            applications: $applications,
+            keys: $keys,
+            policies: $policies,
+            templates: $templates,
+            audits: $audits,
+            encryptSecret: static function (string $secret): string {
+                if (!function_exists('encrypt')) {
+                    throw new RuntimeException('WHMCS encryption helper is unavailable.');
+                }
+                return (string) encrypt($secret);
+            },
+            publicKeyGenerator: static fn (): string => 'prk_' . bin2hex(random_bytes(20)),
+            secretGenerator: static fn (): string => 'prs_' . bin2hex(random_bytes(32)),
+            instanceIdGenerator: [new UuidGenerator(), 'uuid'],
+            defaultRateLimit: 120,
+            clock: $clock,
+            transaction: static fn (callable $callback): mixed => Capsule::connection()->transaction($callback)
+        ),
+        credentials: new CredentialService(
+            applications: $applications,
+            keys: $keys,
+            resets: $resets,
+            audits: $audits,
+            encryptSecret: static function (string $secret): string {
+                if (!function_exists('encrypt')) {
+                    throw new RuntimeException('WHMCS encryption helper is unavailable.');
+                }
+                return (string) encrypt($secret);
+            },
+            decryptSecret: static function (string $secret): string {
+                if (!function_exists('decrypt')) {
+                    throw new RuntimeException('WHMCS decryption helper is unavailable.');
+                }
+                return (string) decrypt($secret);
+            },
+            secretGenerator: static fn (): string => 'prs_' . bin2hex(random_bytes(32)),
+            clock: $clock
+        )
     );
 }
 

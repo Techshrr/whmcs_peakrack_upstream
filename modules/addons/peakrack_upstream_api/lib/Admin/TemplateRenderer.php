@@ -163,6 +163,26 @@ final class TemplateRenderer
                 . $close;
         }
 
+        if ($page === 'onboarding_applications') {
+            return $open
+                . '<input type="hidden" name="action" value="approve_application">'
+                . $this->input('application_id', 'Application ID')
+                . $this->input('template_id', 'Policy Template ID')
+                . '<button type="submit" class="btn btn-primary">Approve Application</button>'
+                . $close
+                . $open
+                . '<input type="hidden" name="action" value="reject_application">'
+                . $this->input('application_id', 'Application ID')
+                . $this->input('admin_message', 'Rejection reason')
+                . '<button type="submit" class="btn btn-danger">Reject Application</button>'
+                . $close
+                . $open
+                . '<input type="hidden" name="action" value="reset_application_secret">'
+                . $this->input('application_id', 'Application ID for admin reset')
+                . '<button type="submit" class="btn btn-warning">Reset Client Secret</button>'
+                . $close;
+        }
+
         if ($page === 'operations') {
             return $open
                 . '<input type="hidden" name="action" value="retry_operation">'

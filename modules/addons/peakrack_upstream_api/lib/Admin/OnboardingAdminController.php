@@ -15,6 +15,8 @@ namespace PeakRack\UpstreamApi\Admin;
 
 use Closure;
 use InvalidArgumentException;
+use PeakRack\UpstreamApi\Application\CredentialService;
+use PeakRack\UpstreamApi\Application\OnboardingService;
 use JsonException;
 use PeakRack\UpstreamApi\Contracts\ApplicationRepository;
 use PeakRack\UpstreamApi\Contracts\AuditRepository;
@@ -37,7 +39,9 @@ final class OnboardingAdminController
         private readonly AuditRepository $audits,
         private readonly Csrf $csrf,
         callable $policyValidator,
-        callable $clock
+        callable $clock,
+        private readonly ?OnboardingService $onboarding = null,
+        private readonly ?CredentialService $credentials = null
     ) {
         $this->policyValidator = Closure::fromCallable($policyValidator);
         $this->clock = Closure::fromCallable($clock);
@@ -76,8 +80,57 @@ final class OnboardingAdminController
         return match ($action) {
             'save_template' => $this->saveTemplate($request, $adminId),
             'disable_template' => $this->disableTemplate($request, $adminId),
+            'approve_application' => $this->approveApplication($request, $adminId),
+            'reject_application' => $this->rejectApplication($request, $adminId),
+            'reset_application_secret' => $this->resetApplicationSecret($request, $adminId),
             default => throw new InvalidArgumentException('The requested onboarding administrator action is invalid.'),
         };
+    }
+
+    private function approveApplication(array $request, int $adminId): string
+    {
+        if (!$this->onboarding instanceof OnboardingService) {
+            throw new RuntimeException('The onboarding service is unavailable.');
+        }
+
+        $this->onboarding->approve(
+            $this->positiveInt($request, 'application_id'),
+            $this->positiveInt($request, 'template_id'),
+            $adminId
+        );
+
+        return 'Application approved. The client can view the API Secret once in the Client Area.';
+    }
+
+    private function rejectApplication(array $request, int $adminId): string
+    {
+        if (!$this->onboarding instanceof OnboardingService) {
+            throw new RuntimeException('The onboarding service is unavailable.');
+        }
+
+        $message = trim((string) ($request['admin_message'] ?? ''));
+        if ($message === '') {
+            throw new InvalidArgumentException('A rejection reason is required.');
+        }
+
+        $this->onboarding->reject($this->positiveInt($request, 'application_id'), $message, $adminId);
+
+        return 'Application rejected.';
+    }
+
+    private function resetApplicationSecret(array $request, int $adminId): string
+    {
+        if (!$this->credentials instanceof CredentialService) {
+            throw new RuntimeException('The credential service is unavailable.');
+        }
+
+        $this->credentials->resetByAdmin(
+            $this->positiveInt($request, 'application_id'),
+            $adminId,
+            (string) ($_SERVER['REMOTE_ADDR'] ?? '')
+        );
+
+        return 'API Secret reset. The client can view it once in the Client Area.';
     }
 
     private function saveTemplate(array $request, int $adminId): string
