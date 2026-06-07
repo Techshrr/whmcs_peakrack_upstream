@@ -50,8 +50,18 @@ final class CredentialService
 
     public function displayPendingSecretForClient(int $clientId): ?array
     {
+        $details = $this->keyDetailsForClient($clientId);
+        if ($details === null || ($details['secret'] ?? null) === null) {
+            return null;
+        }
+
+        return $details;
+    }
+
+    public function keyDetailsForClient(int $clientId): ?array
+    {
         $application = $this->applications->findApprovedForClient($clientId);
-        if (!$application instanceof OnboardingApplication || !$application->secretPendingDisplay()) {
+        if (!$application instanceof OnboardingApplication) {
             return null;
         }
 
@@ -61,7 +71,9 @@ final class CredentialService
             'application_id' => $application->id(),
             'api_key_id' => $application->apiKeyId(),
             'public_key' => (string) ($key['public_key'] ?? ''),
-            'secret' => (string) ($this->decryptSecret)((string) ($key['encrypted_secret'] ?? '')),
+            'secret' => $application->secretPendingDisplay()
+                ? (string) ($this->decryptSecret)((string) ($key['encrypted_secret'] ?? ''))
+                : null,
         ];
     }
 
