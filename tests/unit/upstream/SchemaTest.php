@@ -13,6 +13,11 @@ final class SchemaTest extends TestCase
 
         $expected = [
             'mod_peakrack_upstream_api_keys',
+            'mod_peakrack_upstream_applications',
+            'mod_peakrack_upstream_policy_templates',
+            'mod_peakrack_upstream_policy_template_items',
+            'mod_peakrack_upstream_secret_reset_events',
+            'mod_peakrack_upstream_audit_events',
             'mod_peakrack_upstream_product_policies',
             'mod_peakrack_upstream_services',
             'mod_peakrack_upstream_operations',
@@ -97,5 +102,43 @@ final class SchemaTest extends TestCase
             (bool) preg_match('/->(?:unique|index)\(\s*\[[^\)]*\]\s*\)/s', $schemaSource),
             'Composite schema indexes must use explicit names.'
         );
+    }
+
+    public function testDefinesOnboardingTablesWithShortIndexNames(): void
+    {
+        $definitions = Schema::definitions();
+
+        $expectedTables = [
+            Schema::APPLICATIONS,
+            Schema::POLICY_TEMPLATES,
+            Schema::POLICY_TEMPLATE_ITEMS,
+            Schema::SECRET_RESET_EVENTS,
+            Schema::AUDIT_EVENTS,
+        ];
+
+        foreach ($expectedTables as $table) {
+            $this->assertArrayHasKey($table, $definitions);
+        }
+
+        $this->assertContains('active_client_key', $definitions[Schema::APPLICATIONS]['columns']);
+        $this->assertContains('secret_pending_display', $definitions[Schema::APPLICATIONS]['columns']);
+        $this->assertContains('terms_accepted_ip', $definitions[Schema::APPLICATIONS]['columns']);
+        $this->assertContains(['active_client_key'], $definitions[Schema::APPLICATIONS]['unique']);
+        $this->assertContains('billing_cycles_json', $definitions[Schema::POLICY_TEMPLATE_ITEMS]['columns']);
+        $this->assertContains('bypassed_limits', $definitions[Schema::SECRET_RESET_EVENTS]['columns']);
+        $this->assertContains('sanitized_context_json', $definitions[Schema::AUDIT_EVENTS]['columns']);
+
+        $this->assertContains(
+            ['columns' => ['active_client_key'], 'name' => 'pru_app_active_client_uq'],
+            Schema::indexDefinitions()[Schema::APPLICATIONS]['unique']
+        );
+
+        foreach (Schema::indexDefinitions() as $groups) {
+            foreach ($groups as $definitionsForType) {
+                foreach ($definitionsForType as $definition) {
+                    $this->assertTrue(strlen($definition['name']) <= 64, $definition['name']);
+                }
+            }
+        }
     }
 }

@@ -19,6 +19,11 @@ use WHMCS\Database\Capsule;
 final class Schema
 {
     public const API_KEYS = 'mod_peakrack_upstream_api_keys';
+    public const APPLICATIONS = 'mod_peakrack_upstream_applications';
+    public const POLICY_TEMPLATES = 'mod_peakrack_upstream_policy_templates';
+    public const POLICY_TEMPLATE_ITEMS = 'mod_peakrack_upstream_policy_template_items';
+    public const SECRET_RESET_EVENTS = 'mod_peakrack_upstream_secret_reset_events';
+    public const AUDIT_EVENTS = 'mod_peakrack_upstream_audit_events';
     public const POLICIES = 'mod_peakrack_upstream_product_policies';
     public const SERVICES = 'mod_peakrack_upstream_services';
     public const OPERATIONS = 'mod_peakrack_upstream_operations';
@@ -39,6 +44,44 @@ final class Schema
                     'last_used_ip', 'created_at', 'updated_at',
                 ],
                 'unique' => [['public_key'], ['instance_id']],
+            ],
+            self::APPLICATIONS => [
+                'columns' => [
+                    'id', 'client_id', 'status', 'active_client_key', 'brand_name',
+                    'downstream_domain', 'outbound_ips_json', 'business_type',
+                    'telegram', 'qq', 'phone', 'notes', 'terms_accepted_at',
+                    'terms_accepted_ip', 'admin_message', 'admin_id',
+                    'reviewed_at', 'api_key_id', 'template_id',
+                    'secret_pending_display', 'created_at', 'updated_at',
+                ],
+                'unique' => [['active_client_key']],
+            ],
+            self::POLICY_TEMPLATES => [
+                'columns' => ['id', 'name', 'description', 'enabled', 'created_at', 'updated_at'],
+                'unique' => [['name']],
+            ],
+            self::POLICY_TEMPLATE_ITEMS => [
+                'columns' => [
+                    'id', 'template_id', 'product_id', 'billing_cycles_json', 'actions_json',
+                    'locations_json', 'os_templates_json', 'delivery_mappings_json',
+                    'sso_allowed', 'sso_hosts_json', 'destroy_allowed', 'sort_order',
+                    'created_at', 'updated_at',
+                ],
+                'unique' => [],
+            ],
+            self::SECRET_RESET_EVENTS => [
+                'columns' => [
+                    'id', 'api_key_id', 'client_id', 'actor_type', 'actor_id',
+                    'reset_at', 'bypassed_limits', 'source_ip', 'created_at',
+                ],
+                'unique' => [],
+            ],
+            self::AUDIT_EVENTS => [
+                'columns' => [
+                    'id', 'event_type', 'actor_type', 'actor_id', 'client_id',
+                    'application_id', 'api_key_id', 'sanitized_context_json', 'created_at',
+                ],
+                'unique' => [],
             ],
             self::POLICIES => [
                 'columns' => [
@@ -98,6 +141,51 @@ final class Schema
                 'index' => [
                     ['columns' => ['client_id'], 'name' => 'pru_keys_client_idx'],
                     ['columns' => ['enabled'], 'name' => 'pru_keys_enabled_idx'],
+                ],
+            ],
+            self::APPLICATIONS => [
+                'unique' => [
+                    ['columns' => ['active_client_key'], 'name' => 'pru_app_active_client_uq'],
+                ],
+                'index' => [
+                    ['columns' => ['client_id'], 'name' => 'pru_app_client_idx'],
+                    ['columns' => ['status'], 'name' => 'pru_app_status_idx'],
+                    ['columns' => ['api_key_id'], 'name' => 'pru_app_key_idx'],
+                    ['columns' => ['template_id'], 'name' => 'pru_app_template_idx'],
+                ],
+            ],
+            self::POLICY_TEMPLATES => [
+                'unique' => [
+                    ['columns' => ['name'], 'name' => 'pru_tpl_name_uq'],
+                ],
+                'index' => [
+                    ['columns' => ['enabled'], 'name' => 'pru_tpl_enabled_idx'],
+                ],
+            ],
+            self::POLICY_TEMPLATE_ITEMS => [
+                'unique' => [],
+                'index' => [
+                    ['columns' => ['template_id'], 'name' => 'pru_tpl_item_tpl_idx'],
+                    ['columns' => ['product_id'], 'name' => 'pru_tpl_item_product_idx'],
+                    ['columns' => ['sort_order'], 'name' => 'pru_tpl_item_sort_idx'],
+                ],
+            ],
+            self::SECRET_RESET_EVENTS => [
+                'unique' => [],
+                'index' => [
+                    ['columns' => ['api_key_id'], 'name' => 'pru_reset_key_idx'],
+                    ['columns' => ['client_id'], 'name' => 'pru_reset_client_idx'],
+                    ['columns' => ['reset_at'], 'name' => 'pru_reset_at_idx'],
+                ],
+            ],
+            self::AUDIT_EVENTS => [
+                'unique' => [],
+                'index' => [
+                    ['columns' => ['event_type'], 'name' => 'pru_audit_type_idx'],
+                    ['columns' => ['client_id'], 'name' => 'pru_audit_client_idx'],
+                    ['columns' => ['application_id'], 'name' => 'pru_audit_app_idx'],
+                    ['columns' => ['api_key_id'], 'name' => 'pru_audit_key_idx'],
+                    ['columns' => ['created_at'], 'name' => 'pru_audit_created_idx'],
                 ],
             ],
             self::POLICIES => [
@@ -190,6 +278,93 @@ final class Schema
                 $table->string('last_used_ip', 45)->nullable();
                 self::timestamps($table);
                 self::applyIndexDefinitions($table, self::API_KEYS);
+            });
+        }
+
+        if (!$schema->hasTable(self::APPLICATIONS)) {
+            $schema->create(self::APPLICATIONS, static function (Blueprint $table): void {
+                $table->bigIncrements('id');
+                $table->unsignedInteger('client_id');
+                $table->string('status', 32);
+                $table->string('active_client_key', 64)->nullable();
+                $table->string('brand_name', 120);
+                $table->string('downstream_domain', 255);
+                $table->text('outbound_ips_json')->nullable();
+                $table->string('business_type', 64);
+                $table->string('telegram', 128);
+                $table->string('qq', 12)->nullable();
+                $table->string('phone', 32)->nullable();
+                $table->text('notes')->nullable();
+                $table->unsignedBigInteger('terms_accepted_at')->nullable();
+                $table->string('terms_accepted_ip', 45)->nullable();
+                $table->text('admin_message')->nullable();
+                $table->unsignedInteger('admin_id')->nullable();
+                $table->unsignedBigInteger('reviewed_at')->nullable();
+                $table->unsignedBigInteger('api_key_id')->nullable();
+                $table->unsignedBigInteger('template_id')->nullable();
+                $table->boolean('secret_pending_display')->default(false);
+                self::timestamps($table);
+                self::applyIndexDefinitions($table, self::APPLICATIONS);
+            });
+        }
+
+        if (!$schema->hasTable(self::POLICY_TEMPLATES)) {
+            $schema->create(self::POLICY_TEMPLATES, static function (Blueprint $table): void {
+                $table->bigIncrements('id');
+                $table->string('name', 120);
+                $table->text('description')->nullable();
+                $table->boolean('enabled')->default(true);
+                self::timestamps($table);
+                self::applyIndexDefinitions($table, self::POLICY_TEMPLATES);
+            });
+        }
+
+        if (!$schema->hasTable(self::POLICY_TEMPLATE_ITEMS)) {
+            $schema->create(self::POLICY_TEMPLATE_ITEMS, static function (Blueprint $table): void {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('template_id');
+                $table->unsignedInteger('product_id');
+                $table->text('billing_cycles_json');
+                $table->text('actions_json');
+                $table->text('locations_json')->nullable();
+                $table->text('os_templates_json')->nullable();
+                $table->text('delivery_mappings_json')->nullable();
+                $table->boolean('sso_allowed')->default(false);
+                $table->text('sso_hosts_json')->nullable();
+                $table->boolean('destroy_allowed')->default(false);
+                $table->unsignedInteger('sort_order')->default(0);
+                self::timestamps($table);
+                self::applyIndexDefinitions($table, self::POLICY_TEMPLATE_ITEMS);
+            });
+        }
+
+        if (!$schema->hasTable(self::SECRET_RESET_EVENTS)) {
+            $schema->create(self::SECRET_RESET_EVENTS, static function (Blueprint $table): void {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('api_key_id');
+                $table->unsignedInteger('client_id');
+                $table->string('actor_type', 32);
+                $table->unsignedInteger('actor_id')->nullable();
+                $table->unsignedBigInteger('reset_at');
+                $table->boolean('bypassed_limits')->default(false);
+                $table->string('source_ip', 45)->nullable();
+                $table->unsignedBigInteger('created_at');
+                self::applyIndexDefinitions($table, self::SECRET_RESET_EVENTS);
+            });
+        }
+
+        if (!$schema->hasTable(self::AUDIT_EVENTS)) {
+            $schema->create(self::AUDIT_EVENTS, static function (Blueprint $table): void {
+                $table->bigIncrements('id');
+                $table->string('event_type', 64);
+                $table->string('actor_type', 32);
+                $table->unsignedInteger('actor_id')->nullable();
+                $table->unsignedInteger('client_id')->nullable();
+                $table->unsignedBigInteger('application_id')->nullable();
+                $table->unsignedBigInteger('api_key_id')->nullable();
+                $table->text('sanitized_context_json')->nullable();
+                $table->unsignedBigInteger('created_at');
+                self::applyIndexDefinitions($table, self::AUDIT_EVENTS);
             });
         }
 
