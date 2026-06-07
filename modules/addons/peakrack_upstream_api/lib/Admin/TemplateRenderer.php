@@ -22,6 +22,8 @@ final class TemplateRenderer
         'dashboard' => 'Dashboard',
         'api_keys' => 'API Keys',
         'product_policies' => 'Product Policies',
+        'policy_templates' => 'Policy Templates',
+        'onboarding_applications' => 'Onboarding Applications',
         'operations' => 'Operations',
         'services' => 'Services',
         'system_health' => 'System Health',
@@ -140,6 +142,47 @@ final class TemplateRenderer
                 . $close;
         }
 
+        if ($page === 'policy_templates') {
+            return $open
+                . '<input type="hidden" name="action" value="save_template">'
+                . $this->input('template_id', 'Template ID when updating')
+                . $this->input('name', 'Template name')
+                . $this->input('description', 'Description')
+                . $this->checkbox('enabled', 'Template enabled', true)
+                . $this->textarea(
+                    'items_json',
+                    'Items JSON: one JSON array item becomes one product policy row.',
+                    '[{"product_id":1,"billing_cycles":"monthly","actions":"create,renew","locations":"","os_templates":"","delivery_mappings":"","sso_hosts":"","sso_allowed":"0","destroy_allowed":"0"}]'
+                )
+                . '<button type="submit" class="btn btn-primary">Save Template</button>'
+                . $close
+                . $open
+                . '<input type="hidden" name="action" value="disable_template">'
+                . $this->input('template_id', 'Template ID to disable')
+                . '<button type="submit" class="btn btn-warning">Disable Template</button>'
+                . $close;
+        }
+
+        if ($page === 'onboarding_applications') {
+            return $open
+                . '<input type="hidden" name="action" value="approve_application">'
+                . $this->input('application_id', 'Application ID')
+                . $this->input('template_id', 'Policy Template ID')
+                . '<button type="submit" class="btn btn-primary">Approve Application</button>'
+                . $close
+                . $open
+                . '<input type="hidden" name="action" value="reject_application">'
+                . $this->input('application_id', 'Application ID')
+                . $this->input('admin_message', 'Rejection reason')
+                . '<button type="submit" class="btn btn-danger">Reject Application</button>'
+                . $close
+                . $open
+                . '<input type="hidden" name="action" value="reset_application_secret">'
+                . $this->input('application_id', 'Application ID for admin reset')
+                . '<button type="submit" class="btn btn-warning">Reset Client Secret</button>'
+                . $close;
+        }
+
         if ($page === 'operations') {
             return $open
                 . '<input type="hidden" name="action" value="retry_operation">'
@@ -160,6 +203,17 @@ final class TemplateRenderer
             . '" value="'
             . $this->escape($value)
             . '">';
+    }
+
+    private function textarea(string $name, string $label, string $value = ''): string
+    {
+        return '<div class="form-group" style="display:block;margin-bottom:10px">'
+            . '<label style="display:block">' . $this->escape($label) . '</label>'
+            . '<textarea class="form-control" style="width:100%;min-height:90px" name="'
+            . $this->escape($name)
+            . '">'
+            . $this->escape($value)
+            . '</textarea></div>';
     }
 
     private function checkbox(string $name, string $label, bool $checked = false): string

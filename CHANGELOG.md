@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 
 This project follows Semantic Versioning where practical.
 
+## [1.1.0] - 2026-06-08
+
+### Added
+
+- Added optional Client Area onboarding for reseller API access with eligibility checks and manual administrator approval.
+- Added policy templates so one approved application can create multiple product policy rows for the new API key.
+- Added one-time API Secret display for approved clients and client-initiated reset limits of three resets per calendar month with at least ten days between resets.
+- Added administrator secret reset for approved onboarding applications. Administrator resets bypass client reset limits and write audit records.
+- Added setup-guide data for approved clients, including downstream module download URL, API base URL, public key, and portable Cron example.
+
+### Changed
+
+- Added Addon configuration fields for allowed client groups, downstream module download URL, integration terms URL, default onboarding rate limit, and required outbound IP allowlists.
+
+### Security
+
+- Client Area onboarding actions use a separate CSRF token and derive ownership only from the logged-in WHMCS client session.
+
 ## [1.0.0] - 2026-06-05
 
 ### Added

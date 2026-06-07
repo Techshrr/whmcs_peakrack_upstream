@@ -30,9 +30,23 @@
 
 ## 数据库变更
 
-`1.0.0` 是首个版本。激活上游 Addon 时会创建模块自有数据表。停用 Addon 时会保留这些表及其中数据。
+`1.1.0` 会为上游 Addon 增加自助申请、策略模板、Secret 重置记录和审计记录相关数据表。数据库变更是增量变更。
 
-后续版本如果需要修改数据库结构，将在本文档与 [CHANGELOG.md](CHANGELOG.md) 中明确说明。
+停用 Addon 时仍会保留模块自有表和数据。已有 v1 API Key、产品策略、操作记录和托管服务记录会继续工作。
+
+## 版本升级说明
+
+### 从 1.0.x 升级到 1.1.x
+
+- API 不包含破坏性变更。
+- 已有手动 API Key 和产品策略会继续工作。
+- 客户区自助申请是可选功能。
+- 引导客户使用自助申请页面前，请先配置 `Allowed Client Group IDs`。
+- 如果需要已批准客户在客户区下载下游模块，请配置 `Downstream Module Download URL`。
+- 如果申请表需要链接到经销商对接条款，请配置 `Integration Terms URL`。
+- 批准自助申请前，请检查 `Default API Rate Limit`。
+- 除非明确允许无来源 IP 限制的申请，否则保持 `Require Outbound IP Allowlist` 开启。
+- 管理员使用模板批准申请前，需要先创建策略模板。
 
 ## 回滚方法
 

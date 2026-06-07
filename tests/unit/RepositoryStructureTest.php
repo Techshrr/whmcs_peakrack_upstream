@@ -9,7 +9,7 @@ final class RepositoryStructureTest extends TestCase
     public function testReleaseMetadataAndModuleLicensesExist(): void
     {
         $this->assertSame(
-            '1.0.0',
+            '1.1.0',
             trim((string) file_get_contents(PEAKRACK_UPSTREAM_ROOT . '/VERSION'))
         );
 
