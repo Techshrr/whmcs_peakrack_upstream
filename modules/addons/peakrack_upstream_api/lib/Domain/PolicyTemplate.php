@@ -17,6 +17,8 @@ final class PolicyTemplate
 {
     private function __construct(
         private readonly int $id,
+        private readonly string $name,
+        private readonly string $description,
         private readonly bool $enabled,
         private readonly array $items
     ) {
@@ -26,6 +28,8 @@ final class PolicyTemplate
     {
         return new self(
             (int) ($row['id'] ?? 0),
+            (string) ($row['name'] ?? ''),
+            (string) ($row['description'] ?? ''),
             self::boolValue($row['enabled'] ?? false),
             array_map(
                 static fn (array $item): array => self::normalizeItem($item),
@@ -42,6 +46,16 @@ final class PolicyTemplate
     public function enabled(): bool
     {
         return $this->enabled;
+    }
+
+    public function name(): string
+    {
+        return $this->name;
+    }
+
+    public function description(): string
+    {
+        return $this->description;
     }
 
     public function items(): array

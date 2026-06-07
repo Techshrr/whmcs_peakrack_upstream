@@ -14,11 +14,15 @@
 use PeakRack\UpstreamApi\Admin\ActivationService;
 use PeakRack\UpstreamApi\Admin\AdminController;
 use PeakRack\UpstreamApi\Admin\Csrf;
+use PeakRack\UpstreamApi\Admin\OnboardingAdminController;
 use PeakRack\UpstreamApi\Admin\TemplateRenderer;
 use PeakRack\UpstreamApi\Bootstrap;
 use PeakRack\UpstreamApi\Config;
+use PeakRack\UpstreamApi\Database\CapsuleApplicationRepository;
+use PeakRack\UpstreamApi\Database\CapsuleAuditRepository;
 use PeakRack\UpstreamApi\Database\CapsuleApiKeyRepository;
 use PeakRack\UpstreamApi\Database\CapsuleOperationRepository;
+use PeakRack\UpstreamApi\Database\CapsulePolicyTemplateRepository;
 use PeakRack\UpstreamApi\Database\CapsulePolicyRepository;
 use PeakRack\UpstreamApi\Database\Schema;
 use PeakRack\UpstreamApi\Support\UuidGenerator;
@@ -87,12 +91,11 @@ function peakrack_upstream_api_output(array $vars): void
     $request = array_merge($_GET, $_POST);
 
     try {
-        $view = peakrack_upstream_api_admin_controller()->dispatch(
-            $request,
-            $adminId,
-            $_SESSION,
-            (string) ($vars['modulelink'] ?? 'addonmodules.php?module=peakrack_upstream_api')
-        );
+        $moduleLink = (string) ($vars['modulelink'] ?? 'addonmodules.php?module=peakrack_upstream_api');
+        $page = (string) ($request['page'] ?? 'dashboard');
+        $view = in_array($page, ['policy_templates', 'onboarding_applications'], true)
+            ? peakrack_upstream_api_onboarding_admin_controller()->dispatch($request, $adminId, $_SESSION, $moduleLink)
+            : peakrack_upstream_api_admin_controller()->dispatch($request, $adminId, $_SESSION, $moduleLink);
         echo (new TemplateRenderer(__DIR__ . '/templates'))->render($view);
     } catch (InvalidArgumentException $exception) {
         echo '<div class="alert alert-danger">'
@@ -101,6 +104,23 @@ function peakrack_upstream_api_output(array $vars): void
     } catch (Throwable) {
         echo '<div class="alert alert-danger">The administrator request could not be completed.</div>';
     }
+}
+
+function peakrack_upstream_api_onboarding_admin_controller(): OnboardingAdminController
+{
+    return new OnboardingAdminController(
+        applications: new CapsuleApplicationRepository(),
+        templates: new CapsulePolicyTemplateRepository(),
+        audits: new CapsuleAuditRepository(),
+        csrf: new Csrf(),
+        policyValidator: static function (array $policy): void {
+            $product = Capsule::table('tblproducts')->where('id', (int) $policy['product_id'])->first();
+            if ($product === null || trim((string) $product->servertype) === '') {
+                throw new InvalidArgumentException('The product must exist and have a Provisioning Module assigned.');
+            }
+        },
+        clock: static fn (): int => time()
+    );
 }
 
 function peakrack_upstream_api_admin_controller(): AdminController
