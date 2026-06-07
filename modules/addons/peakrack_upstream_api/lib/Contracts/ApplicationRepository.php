@@ -1,0 +1,33 @@
+<?php
+// SPDX-License-Identifier: Apache-2.0
+
+/**
+ * PeakRack Upstream WHMCS Integration
+ *
+ * Official repository:
+ * https://github.com/Techshrr/whmcs_peakrack_upstream
+ *
+ * Copyright 2026 PeakRack.
+ * Licensed under the Apache License, Version 2.0.
+ */
+
+namespace PeakRack\UpstreamApi\Contracts;
+
+use PeakRack\UpstreamApi\Domain\OnboardingApplication;
+
+interface ApplicationRepository
+{
+    public function create(array $attributes): int;
+
+    public function find(int $id): ?OnboardingApplication;
+
+    public function findActiveForClient(int $clientId): ?OnboardingApplication;
+
+    public function findApprovedForClient(int $clientId): ?OnboardingApplication;
+
+    public function findPending(int $id): ?OnboardingApplication;
+
+    public function save(OnboardingApplication $application): void;
+
+    public function listByStatus(?string $status, int $limit = 100): array;
+}
