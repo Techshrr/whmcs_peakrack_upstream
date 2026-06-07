@@ -102,6 +102,11 @@ final class SchemaTest extends TestCase
             (bool) preg_match('/->(?:unique|index)\(\s*\[[^\)]*\]\s*\)/s', $schemaSource),
             'Composite schema indexes must use explicit names.'
         );
+        $this->assertStringContains(
+            "\$table->string('business_type', 200)",
+            $schemaSource,
+            'Application business type storage must match the 200-character validator limit.'
+        );
     }
 
     public function testDefinesOnboardingTablesWithShortIndexNames(): void

@@ -290,7 +290,7 @@ final class Schema
                 $table->string('brand_name', 120);
                 $table->string('downstream_domain', 255);
                 $table->text('outbound_ips_json')->nullable();
-                $table->string('business_type', 64);
+                $table->string('business_type', 200);
                 $table->string('telegram', 128);
                 $table->string('qq', 12)->nullable();
                 $table->string('phone', 32)->nullable();
