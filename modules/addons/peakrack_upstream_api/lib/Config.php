@@ -15,7 +15,7 @@ namespace PeakRack\UpstreamApi;
 
 final class Config
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.1.0';
     public const API_VERSION = 'v1';
     public const MINIMUM_PHP_VERSION = '8.2.0';
     public const SUPPORTED_WHMCS_SERIES = '9.0';

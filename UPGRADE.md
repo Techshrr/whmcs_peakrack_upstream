@@ -30,9 +30,23 @@ This guide covers upgrades for the PeakRack Upstream WHMCS Integration.
 
 ## Database Changes
 
-Version `1.0.0` is the initial release. Activating the upstream Addon creates its Addon-owned tables. Deactivation preserves those tables and their data.
+Version `1.1.0` adds onboarding, policy-template, secret-reset, and audit tables to the upstream Addon schema. The schema changes are additive.
 
-Future releases that require schema changes will document them in this file and in [CHANGELOG.md](CHANGELOG.md).
+Addon deactivation preserves the Addon-owned tables and their data. Existing v1 API keys, product policies, operations, and managed-service rows continue to work.
+
+## Version-Specific Notes
+
+### Upgrade from 1.0.x to 1.1.x
+
+- No breaking API changes.
+- Existing manual API keys and Product Policies continue to work.
+- Client Area onboarding is optional.
+- Configure `Allowed Client Group IDs` before directing clients to the onboarding page.
+- Configure `Downstream Module Download URL` if approved clients should download the downstream module from the Client Area.
+- Configure `Integration Terms URL` if the application form should link to your current reseller integration terms.
+- Review `Default API Rate Limit` before approving onboarding applications.
+- Keep `Require Outbound IP Allowlist` enabled unless you intentionally allow applications without source IP restrictions.
+- Policy templates must be created before administrators can approve onboarding applications with a template.
 
 ## Rollback
 

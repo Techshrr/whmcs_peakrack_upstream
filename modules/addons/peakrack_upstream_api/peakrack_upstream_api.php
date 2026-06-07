@@ -62,6 +62,40 @@ function peakrack_upstream_api_config(): array
                 'Default' => '25',
                 'Description' => 'Operations claimed by each one-minute worker run.',
             ],
+            'allowed_client_group_ids' => [
+                'FriendlyName' => 'Allowed Client Group IDs',
+                'Type' => 'text',
+                'Size' => '40',
+                'Default' => '',
+                'Description' => 'Comma-separated WHMCS client group IDs allowed to apply for upstream API access.',
+            ],
+            'downstream_module_download_url' => [
+                'FriendlyName' => 'Downstream Module Download URL',
+                'Type' => 'text',
+                'Size' => '80',
+                'Default' => '',
+                'Description' => 'Download URL shown to approved reseller clients.',
+            ],
+            'integration_terms_url' => [
+                'FriendlyName' => 'Integration Terms URL',
+                'Type' => 'text',
+                'Size' => '80',
+                'Default' => '',
+                'Description' => 'Terms URL shown next to the Client Area agreement checkbox.',
+            ],
+            'default_api_rate_limit' => [
+                'FriendlyName' => 'Default API Rate Limit',
+                'Type' => 'text',
+                'Size' => '8',
+                'Default' => '120',
+                'Description' => 'Per-minute rate limit for API keys created through onboarding.',
+            ],
+            'require_outbound_ip_allowlist' => [
+                'FriendlyName' => 'Require Outbound IP Allowlist',
+                'Type' => 'yesno',
+                'Default' => 'on',
+                'Description' => 'Require reseller applications to submit at least one outbound IP or CIDR entry.',
+            ],
         ],
     ];
 }

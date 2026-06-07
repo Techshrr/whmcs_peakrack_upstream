@@ -22,6 +22,11 @@ final class AddonEntryTest extends TestCase
         }
         $this->assertArrayHasKey('order_payment_method', $config['fields']);
         $this->assertArrayHasKey('worker_batch_size', $config['fields']);
+        $this->assertArrayHasKey('allowed_client_group_ids', $config['fields']);
+        $this->assertArrayHasKey('downstream_module_download_url', $config['fields']);
+        $this->assertArrayHasKey('integration_terms_url', $config['fields']);
+        $this->assertArrayHasKey('default_api_rate_limit', $config['fields']);
+        $this->assertArrayHasKey('require_outbound_ip_allowlist', $config['fields']);
     }
 
     public function testCompatibilityRejectsUnsupportedPhpAndWhmcsSeries(): void

@@ -18,6 +18,7 @@
 
 - HMAC-SHA256 签名、时间戳、Nonce 防重放、可选 IP 白名单和每个 API Key 的速率限制。
 - 一个 API Key 绑定一个上游经销商客户和一个固定的下游实例 ID。
+- 可选的客户区自助申请流程，包含资格检查、管理员人工审核、策略模板和重置限制。
 - 产品、周期、操作、位置、系统模板、交付字段、SSO 域名和 destroy 权限策略。
 - 开通、续费和套餐变更使用上游 WHMCS 原生 Credit。
 - 支持同步与队列混合处理、幂等重试、状态确认、补偿和人工复核。
@@ -65,10 +66,10 @@
 
 每个模块都会生成两种结构的安装包：
 
-- `peakrack-upstream-api-v1.0.0.zip` 与 `peakrackupstream-v1.0.0.zip` 只包含模块目录。请将其解压或复制到对应父目录：上游 Addon 放到 `/modules/addons/`，下游 Provisioning Module 放到 `/modules/servers/`。
-- `peakrack-upstream-api-whmcs-root-v1.0.0.zip` 与 `peakrackupstream-whmcs-root-v1.0.0.zip` 包含 `modules/...` 路径。请在上游或下游 WHMCS 根目录解压。
+- `peakrack-upstream-api-v1.1.0.zip` 与 `peakrackupstream-v1.1.0.zip` 只包含模块目录。请将其解压或复制到对应父目录：上游 Addon 放到 `/modules/addons/`，下游 Provisioning Module 放到 `/modules/servers/`。
+- `peakrack-upstream-api-whmcs-root-v1.1.0.zip` 与 `peakrackupstream-whmcs-root-v1.1.0.zip` 包含 `modules/...` 路径。请在上游或下游 WHMCS 根目录解压。
 
-下游安装时，如果直接在 WHMCS 根目录解压 `peakrackupstream-v1.0.0.zip`，会生成错误路径，WHMCS 后台不会显示该模块。请在下游 WHMCS 根目录解压 `peakrackupstream-whmcs-root-v1.0.0.zip`，或把 `peakrackupstream` 目录直接放到 `/modules/servers/` 下。
+下游安装时，如果直接在 WHMCS 根目录解压 `peakrackupstream-v1.1.0.zip`，会生成错误路径，WHMCS 后台不会显示该模块。请在下游 WHMCS 根目录解压 `peakrackupstream-whmcs-root-v1.1.0.zip`，或把 `peakrackupstream` 目录直接放到 `/modules/servers/` 下。
 
 ## 上游 Addon 配置
 
@@ -76,8 +77,25 @@
 |---|---|---|
 | Order Payment Method | API 创建上游订单时使用的支付方式 | `mailin` |
 | Worker Batch Size | 每分钟 Worker 最多领取的操作数量 | `25` |
+| Allowed Client Group IDs | 允许提交客户区自助申请的 WHMCS 客户组 ID，多个用英文逗号分隔 | 空 |
+| Downstream Module Download URL | 显示给已批准经销商客户的下游模块下载链接 | 空 |
+| Integration Terms URL | 客户区同意条款旁显示的条款链接 | 空 |
+| Default API Rate Limit | 通过自助申请批准创建的 API Key 每分钟请求限制 | `120` |
+| Require Outbound IP Allowlist | 要求申请人至少提交一个出站 IP 或 CIDR | 开启 |
 
 Addon 后台提供 API Keys、产品策略、操作记录、托管服务和系统健康页面。API Secret 仅在创建或轮换时显示。空 IP 白名单必须由管理员明确确认。
+
+## 客户区自助申请
+
+客户区自助申请是可选功能。上游 Addon 仍然保留手动创建 API Key 和手动管理产品策略的方式。
+
+启用自助申请后，已登录的上游经销商客户可以在 Addon 客户区页面提交申请。资格检查要求客户邮箱已验证、没有逾期账单、客户状态为 Active，并且属于配置的 `Allowed Client Group IDs` 之一。
+
+申请必须由管理员人工审核。管理员批准时需要选择一个策略模板。批准后系统会为该客户创建一个 API Key，并把所选模板中的策略行应用到该 Key。
+
+API Secret 只会在客户区向已批准客户显示一次。客户自行重置 Secret 的限制是每个自然月最多 3 次，并且两次重置至少间隔 10 天。管理员重置不受客户限制影响，但会写入审计记录；重置后的 Secret 仍然只在客户区显示一次。
+
+已批准客户的客户区页面会显示下游模块下载地址、API Base URL、Public Key、可用时的一次性 Secret，以及使用 `/path/to/php` 和 `/path/to/whmcs` 占位符的 Cron 示例，不假设 cPanel、宝塔或具体 Linux 用户名。
 
 ## 下游服务器配置
 
@@ -129,6 +147,7 @@ Addon 后台提供 API Keys、产品策略、操作记录、托管服务和系�
 - 续费由上游 API 控制，不应对 API 托管服务启用冲突的独立自动化。
 - 下游客户区只显示缓存状态、主 IP、安全 HTTPS 面板地址、最后同步时间和可选 SSO。
 - 第一版不提供客户自行暂停、解除暂停、终止或变更套餐的按钮。
+- 自助申请不会自动创建下游 WHMCS 产品。已批准客户仍需要安装下游模块，并在自己的下游 WHMCS 中配置服务器和产品。
 - Addon 停用时保留其数据库表和数据。
 
 ## 验证边界

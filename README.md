@@ -18,6 +18,7 @@ The upstream WHMCS remains authoritative for reseller Credit, upstream orders, i
 
 - HMAC-SHA256 authentication with timestamp, nonce replay protection, optional IP allowlists, and per-key rate limits.
 - API key binding to one upstream reseller client and one permanent downstream instance ID.
+- Optional Client Area onboarding for reseller API access with eligibility checks, manual administrator approval, policy templates, and reset limits.
 - Product, billing-cycle, action, location, OS template, delivery-field, SSO-host, and destroy permission policies.
 - Native upstream WHMCS Credit billing for create, renew, and package-change operations.
 - Idempotent synchronous and queued operation handling with retries, verification, compensation, and manual-review states.
@@ -65,10 +66,10 @@ No WHMCS core files are modified.
 
 Each module is packaged in two layouts:
 
-- `peakrack-upstream-api-v1.0.0.zip` and `peakrackupstream-v1.0.0.zip` contain only the module directory. Extract or copy them into the matching parent directory: `/modules/addons/` for the upstream Addon and `/modules/servers/` for the downstream Provisioning Module.
-- `peakrack-upstream-api-whmcs-root-v1.0.0.zip` and `peakrackupstream-whmcs-root-v1.0.0.zip` contain the `modules/...` path. Extract this package from the upstream or downstream WHMCS root.
+- `peakrack-upstream-api-v1.1.0.zip` and `peakrackupstream-v1.1.0.zip` contain only the module directory. Extract or copy them into the matching parent directory: `/modules/addons/` for the upstream Addon and `/modules/servers/` for the downstream Provisioning Module.
+- `peakrack-upstream-api-whmcs-root-v1.1.0.zip` and `peakrackupstream-whmcs-root-v1.1.0.zip` contain the `modules/...` path. Extract this package from the upstream or downstream WHMCS root.
 
-For downstream installation, extracting `peakrackupstream-v1.0.0.zip` directly from the WHMCS root creates the wrong path and WHMCS will not list the module. Extract this package from the downstream WHMCS root: `peakrackupstream-whmcs-root-v1.0.0.zip`. Alternatively, place the `peakrackupstream` directory directly under `/modules/servers/`.
+For downstream installation, extracting `peakrackupstream-v1.1.0.zip` directly from the WHMCS root creates the wrong path and WHMCS will not list the module. Extract this package from the downstream WHMCS root: `peakrackupstream-whmcs-root-v1.1.0.zip`. Alternatively, place the `peakrackupstream` directory directly under `/modules/servers/`.
 
 ## Upstream Addon Configuration
 
@@ -76,8 +77,25 @@ For downstream installation, extracting `peakrackupstream-v1.0.0.zip` directly f
 |---|---|---|
 | Order Payment Method | Payment method used for API-created upstream orders | `mailin` |
 | Worker Batch Size | Maximum operations claimed by each one-minute worker run | `25` |
+| Allowed Client Group IDs | Comma-separated WHMCS client group IDs that may submit Client Area onboarding applications | Empty |
+| Downstream Module Download URL | Download link shown to approved reseller clients | Empty |
+| Integration Terms URL | Terms link shown beside the Client Area onboarding agreement checkbox | Empty |
+| Default API Rate Limit | Per-minute rate limit for API keys created through onboarding approval | `120` |
+| Require Outbound IP Allowlist | Requires applicants to submit at least one outbound IP or CIDR | Enabled |
 
 The Addon admin pages manage API keys, product policies, operations, managed services, and system health. API secrets are shown only when created or rotated. An empty IP allowlist requires explicit administrator acknowledgement.
+
+## Client Area Onboarding
+
+Client Area onboarding is optional. Manual API key creation and manual Product Policy management remain available in the upstream Addon.
+
+When onboarding is enabled, a logged-in upstream reseller client can submit an application from the Addon Client Area page. The eligibility check requires a verified email address, no overdue invoices, active client status, and membership in one of the configured `Allowed Client Group IDs`.
+
+Applications require manual administrator approval. During approval, the administrator selects one policy template. The approval creates one API key for the client and applies the selected template's policy rows to that key.
+
+The API Secret is displayed once to the approved client in the Client Area. Client resets are limited to three resets per calendar month and require at least ten days between resets. Administrator resets bypass the client reset limits and write an audit record; the reset secret is then shown once to the client.
+
+The approved Client Area page shows the downstream module download URL, API base URL, public key, one-time secret when available, and a Cron example that uses `/path/to/php` and `/path/to/whmcs` placeholders instead of assuming cPanel, aaPanel, or a Linux username.
 
 ## Downstream Server Configuration
 
@@ -129,6 +147,7 @@ Both scripts refuse browser execution. The downstream sync uses a non-blocking p
 - The upstream API controls renewal. Disable conflicting independent automation for API-managed services.
 - The downstream Client Area shows only cached status, primary IP, safe HTTPS panel URL, last synchronization time, and optional SSO.
 - Customer-controlled lifecycle buttons are intentionally not included.
+- Onboarding does not automatically create downstream WHMCS products. Approved clients still install the downstream module and configure their own downstream WHMCS server and products.
 - Addon deactivation preserves Addon-owned data.
 
 ## Validation Boundary

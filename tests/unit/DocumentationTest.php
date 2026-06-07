@@ -180,4 +180,16 @@ final class DocumentationTest extends TestCase
             'The pending-service priority must be applied before the batch limit.'
         );
     }
+
+    public function testDocumentationMentionsOnboardingAsImplementedAfterRelease(): void
+    {
+        $readme = (string) file_get_contents(PEAKRACK_UPSTREAM_ROOT . '/README.md');
+        $this->assertStringContains('Client Area onboarding', $readme);
+        $this->assertStringContains('manual administrator approval', $readme);
+        $this->assertStringContains('API Secret is displayed once', $readme);
+
+        $upgrade = (string) file_get_contents(PEAKRACK_UPSTREAM_ROOT . '/UPGRADE.md');
+        $this->assertStringContains('Allowed Client Group IDs', $upgrade);
+        $this->assertStringContains('Downstream Module Download URL', $upgrade);
+    }
 }
